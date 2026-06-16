@@ -1,5 +1,6 @@
 import { getLang, onLangChange } from "./i18n.js";
 import { getAboutContent } from "./about-content.js";
+import { patchAboutInRoot } from "./lang-patch.js";
 
 /** @param {HTMLElement} root */
 export function initAbout(root) {
@@ -223,5 +224,11 @@ export function initAbout(root) {
   }
 
   renderAll();
-  onLangChange(renderAll);
+  onLangChange((event) => {
+    if (event.soft) {
+      patchAboutInRoot(root, getLang());
+      return;
+    }
+    renderAll();
+  });
 }

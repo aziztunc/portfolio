@@ -55,7 +55,7 @@ export const copy = {
 /** @type {Lang} */
 let currentLang = "en";
 
-/** @type {Set<() => void>} */
+/** @type {Set<(event: LangChangeEvent) => void>} */
 const listeners = new Set();
 
 /** @returns {Lang} */
@@ -108,23 +108,26 @@ export function getHeadlineCopyForLang(lang) {
   };
 }
 
-/** @param {Lang} lang */
-export function setLang(lang) {
+/** @typedef {{ soft?: boolean }} LangChangeEvent */
+
+/** @param {Lang} lang @param {LangChangeEvent} [options] */
+export function setLang(lang, options = {}) {
   if (lang === currentLang) return;
   currentLang = lang;
   document.documentElement.lang = lang;
   localStorage.setItem(STORAGE_KEY, lang);
   applyTranslations();
-  for (const listener of listeners) listener();
+  const event = { soft: options.soft === true };
+  for (const listener of listeners) listener(event);
 }
 
 export function toggleLang(originEl) {
   const next = currentLang === "en" ? "de" : "en";
   if (next === currentLang) return;
-  playLangTransition(() => setLang(next), originEl);
+  playLangTransition(() => setLang(next, { soft: true }), originEl);
 }
 
-/** @param {() => void} fn */
+/** @param {(event: LangChangeEvent) => void} fn */
 export function onLangChange(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);

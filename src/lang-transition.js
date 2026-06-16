@@ -1,16 +1,12 @@
 import "./lang-transition.css";
-import {
-  applyLangToSubtree,
-  getHeadlineCopyForLang,
-  getNextLang,
-} from "./i18n.js";
-import { getAboutContent } from "./about-content.js";
+import { getNextLang } from "./i18n.js";
+import { patchLangInRoot } from "./lang-patch.js";
 
 const DURATION_MS = 1500;
-const REVEAL_LAG_PX = 160;
-const REVEAL_FEATHER_PX = 56;
-const WARP_SCALE_MAX = 22;
-const WARP_PEAK = 0.38;
+const WARP_BAND_PX = 44;
+const REVEAL_FEATHER_PX = 10;
+const WARP_SCALE_MAX = 20;
+const SETTLE_START = 0.9;
 
 const VERT = `#version 300 es
 in vec2 a_pos;
@@ -96,7 +92,11 @@ let displaceMap = null;
 /** @type {SVGElement | null} */
 let displaceNoise = null;
 
-/** @typedef {{ x: number; y: number }} Point */
+const WARP_TARGETS =
+  "[data-i18n], [data-about], .headline__meta, .headline__line, .headline__layers, .about-timeline__detail, .about-timeline__button, .about-currently__title, .about-currently__item, .placeholder-section__box, .h2";
+
+/** @type {Set<HTMLElement>} */
+const warpedElements = new Set();
 
 function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
@@ -110,7 +110,7 @@ function ensureSvgFilter() {
   svg.innerHTML = `
     <defs>
       <filter id="lang-liquid-displace" x="-20%" y="-20%" width="140%" height="140%">
-        <feTurbulence id="lang-liquid-noise" type="fractalNoise" baseFrequency="0.018 0.055" numOctaves="3" seed="4" result="noise" />
+        <feTurbulence id="lang-liquid-noise" type="fractalNoise" baseFrequency="0.014 0.042" numOctaves="3" seed="4" result="noise" />
         <feDisplacementMap id="lang-liquid-map" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G" />
       </filter>
     </defs>
@@ -203,38 +203,65 @@ function drawLiquid(progress, time, origin) {
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-/** @param {number} progress @param {HTMLElement | null} target */
-function setPageWarp(progress, target) {
-  if (!displaceMap || !target) return;
+/** @typedef {{ x: number; y: number }} Point */
 
-  const edge = 1 - Math.abs(progress - WARP_PEAK) / WARP_PEAK;
-  const scale = Math.max(0, edge) * WARP_SCALE_MAX;
-  displaceMap.setAttribute("scale", String(scale.toFixed(2)));
-  if (displaceNoise) {
-    const freq = 0.014 + Math.max(0, edge) * 0.014;
-    displaceNoise.setAttribute("baseFrequency", `${freq.toFixed(4)} ${(freq * 2.8).toFixed(4)}`);
-  }
-
-  target.classList.add("lang-liquid-warp");
-  target.style.filter = "url(#lang-liquid-displace)";
+function elementCenter(el) {
+  const rect = el.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
 }
 
-/** @param {HTMLElement | null} target */
-function clearPageWarp(target) {
-  if (target) {
-    target.classList.remove("lang-liquid-warp");
-    target.style.filter = "";
+/** @param {Point} origin @param {number} revealRadius @param {number} waveRadius */
+function updateBandWarp(origin, revealRadius, waveRadius) {
+  if (!displaceMap) return;
+
+  const active = waveRadius > revealRadius + 4;
+  displaceMap.setAttribute("scale", active ? String(WARP_SCALE_MAX) : "0");
+
+  const next = new Set();
+  if (active) {
+    document.querySelectorAll(WARP_TARGETS).forEach((node) => {
+      if (!(node instanceof HTMLElement)) return;
+      const center = elementCenter(node);
+      const dist = Math.hypot(center.x - origin.x, center.y - origin.y);
+      if (dist >= revealRadius && dist <= waveRadius + 24) {
+        node.classList.add("lang-liquid-warp");
+        node.style.filter = "url(#lang-liquid-displace)";
+        next.add(node);
+      }
+    });
   }
+
+  for (const node of warpedElements) {
+    if (!next.has(node)) {
+      node.classList.remove("lang-liquid-warp");
+      node.style.filter = "";
+    }
+  }
+  warpedElements.clear();
+  for (const node of next) warpedElements.add(node);
+}
+
+function clearBandWarp() {
+  for (const node of warpedElements) {
+    node.classList.remove("lang-liquid-warp");
+    node.style.filter = "";
+  }
+  warpedElements.clear();
   if (displaceMap) displaceMap.setAttribute("scale", "0");
 }
 
 /** @param {HTMLElement} el @param {Point} origin @param {number} revealRadius */
 function setOldMask(el, origin, revealRadius) {
   if (revealRadius <= 0) {
+    el.classList.remove("lang-liquid-masked");
     el.style.maskImage = "";
     el.style.webkitMaskImage = "";
     return;
   }
+  el.classList.add("lang-liquid-masked");
   const gradient = `radial-gradient(circle at ${origin.x}px ${origin.y}px, transparent ${revealRadius}px, #000 ${revealRadius + 1}px)`;
   el.style.maskImage = gradient;
   el.style.webkitMaskImage = gradient;
@@ -254,12 +281,13 @@ function setRevealMask(reveal, origin, revealRadius) {
   const gradient = `radial-gradient(circle at ${origin.x}px ${origin.y}px, #000 ${fadeStart}px, transparent ${revealRadius}px)`;
   reveal.style.maskImage = gradient;
   reveal.style.webkitMaskImage = gradient;
-  reveal.style.clipPath = `circle(${revealRadius + 2}px at ${origin.x}px ${origin.y}px)`;
+  reveal.style.clipPath = `circle(${revealRadius + 1}px at ${origin.x}px ${origin.y}px)`;
   reveal.style.opacity = "1";
 }
 
 /** @param {HTMLElement} el */
 function clearMask(el) {
+  el.classList.remove("lang-liquid-masked");
   el.style.maskImage = "";
   el.style.webkitMaskImage = "";
   el.style.clipPath = "";
@@ -295,139 +323,24 @@ function maxRevealRadius(origin) {
   return Math.max(...corners.map(([x, y]) => Math.hypot(x - origin.x, y - origin.y))) + 48;
 }
 
+/** @param {number} t @param {number} waveRadius */
+function revealRadiusFor(waveRadius, t) {
+  if (t >= 1) return waveRadius;
+  if (t >= SETTLE_START) {
+    const settle = (t - SETTLE_START) / (1 - SETTLE_START);
+    const band = WARP_BAND_PX * (1 - settle);
+    return Math.max(0, waveRadius - band);
+  }
+  return Math.max(0, waveRadius - WARP_BAND_PX);
+}
 
-/** @param {HTMLElement} track */
-function syncRevealScroll(track) {
+/** @param {HTMLElement} track @param {HTMLElement} screens */
+function syncRevealLayout(track, screens) {
   const scroller = document.scrollingElement || document.documentElement;
+  const pageWidth = document.documentElement.clientWidth;
+  track.style.width = `${pageWidth}px`;
+  track.style.minHeight = `${screens.offsetHeight}px`;
   track.style.transform = `translate3d(0, ${-scroller.scrollTop}px, 0)`;
-}
-
-/** @param {HTMLElement} root @param {"en" | "de"} lang */
-function patchHeadlineInClone(root, lang) {
-  const c = getHeadlineCopyForLang(lang);
-  const old = getHeadlineCopyForLang(lang === "en" ? "de" : "en");
-  const frame = root.querySelector(".headline__frame");
-  if (frame) frame.setAttribute("aria-label", c.aria);
-
-  const metaTop = root.querySelector(".headline__meta--top");
-  const top = root.querySelector(".headline__line--top");
-  const metaBottom = root.querySelector(".headline__meta--bottom");
-  const layersHeader = root.querySelector(".headline__layers-header");
-  const bottomText = root.querySelector(".headline__bottom-text");
-  const layersName = root.querySelector(".headline__layers-name");
-
-  if (metaTop) metaTop.textContent = c.metaTop;
-  if (top) top.textContent = c.top;
-  if (metaBottom) metaBottom.textContent = c.metaBottom;
-  if (layersHeader) layersHeader.textContent = c.layersTitle;
-
-  if (bottomText) {
-    const current = bottomText.textContent?.trim() ?? "";
-    let nextBottom = c.initialBottom;
-    if (current === old.typedBottom || current.includes("(")) {
-      nextBottom = c.typedBottom;
-    } else if (current === old.scrambleBottom) {
-      nextBottom = c.scrambleBottom;
-    }
-    bottomText.textContent = nextBottom;
-  }
-
-  if (layersName) layersName.textContent = c.scrambleBottom;
-}
-
-/** @param {HTMLElement} root @param {"en" | "de"} lang */
-function patchAboutInClone(root, lang) {
-  const content = getAboutContent(lang);
-
-  const greeting = root.querySelector("[data-about='greeting']");
-  const meta = root.querySelector("[data-about='meta']");
-  const introP1 = root.querySelector("[data-about='intro-p1']");
-  const introP2 = root.querySelector("[data-about='intro-p2']");
-  const imgLabel = root.querySelector("[data-about='img-label']");
-  const imgMeta = root.querySelector("[data-about='img-meta']");
-  const img = root.querySelector("[data-about='img']");
-
-  if (greeting) greeting.textContent = content.greeting;
-  if (meta) meta.textContent = content.meta;
-  if (introP1) introP1.textContent = content.introP1;
-  if (introP2) introP2.textContent = content.introP2;
-  if (imgLabel) imgLabel.textContent = content.imgLabel;
-  if (imgMeta) imgMeta.textContent = content.imgMeta;
-  if (img) img.setAttribute("alt", content.imgAlt);
-
-  const title = root.querySelector(".about-timeline__title");
-  const mode = root.querySelector(".about-timeline__mode");
-  const hint = root.querySelector(".about-timeline__hint");
-  if (title) title.textContent = content.timelineTitle;
-  if (mode) mode.textContent = `[${content.timelineMode}]`;
-  if (hint) hint.textContent = content.timelineHint;
-
-  const activeButton =
-    root.querySelector(".about-timeline__node--active .about-timeline__button") ??
-    root.querySelector(".about-timeline__button");
-  const activeId = activeButton?.dataset.nodeId ?? content.nodes[0]?.id ?? "01";
-  const activeNode = content.nodes.find((node) => node.id === activeId) ?? content.nodes[0];
-
-  root.querySelectorAll(".about-timeline__button").forEach((button) => {
-    const node = content.nodes.find((entry) => entry.id === button.dataset.nodeId);
-    if (!node) return;
-    const period = button.querySelector(".about-timeline__node-period");
-    const nodeTitle = button.querySelector(".about-timeline__node-title");
-    const summary = button.querySelector(".about-timeline__node-summary");
-    if (period) period.textContent = node.period;
-    if (nodeTitle) nodeTitle.textContent = node.title;
-    if (summary) summary.textContent = node.summary;
-    button.setAttribute("aria-label", `${node.period}: ${node.title}`);
-  });
-
-  if (activeNode) {
-    const detail = root.querySelector(".about-timeline__detail");
-    if (detail) {
-      const detailMeta = detail.querySelector(".about-timeline__detail-meta");
-      const period = detail.querySelector(".about-timeline__detail-period");
-      const detailTitle = detail.querySelector(".about-timeline__detail-title");
-      const subtitle = detail.querySelector(".about-timeline__detail-subtitle");
-      const bullets = detail.querySelector(".about-timeline__bullets");
-      const tags = detail.querySelector(".about-timeline__tags");
-
-      if (detailMeta) detailMeta.textContent = `${content.selectedPrefix} ${activeNode.id}`;
-      if (period) period.textContent = activeNode.period;
-      if (detailTitle) detailTitle.textContent = activeNode.title;
-      if (subtitle) subtitle.textContent = activeNode.subtitle;
-
-      if (bullets) {
-        bullets.innerHTML = "";
-        for (const point of activeNode.bullets) {
-          const li = document.createElement("li");
-          li.textContent = point;
-          bullets.appendChild(li);
-        }
-      }
-
-      if (tags) {
-        tags.innerHTML = "";
-        for (const tag of activeNode.tags) {
-          const span = document.createElement("span");
-          span.className = "about-timeline__tag";
-          span.textContent = tag;
-          tags.appendChild(span);
-        }
-      }
-    }
-  }
-
-  const currentlyTitle = root.querySelector(".about-currently__title");
-  const currentlyList = root.querySelector(".about-currently__list");
-  if (currentlyTitle) currentlyTitle.textContent = content.currentlyTitle;
-  if (currentlyList) {
-    currentlyList.innerHTML = "";
-    for (const item of content.currentlyItems) {
-      const li = document.createElement("li");
-      li.className = "about-currently__item";
-      li.textContent = item;
-      currentlyList.appendChild(li);
-    }
-  }
 }
 
 /** @param {HTMLElement} screens @param {"en" | "de"} lang */
@@ -444,16 +357,16 @@ function createRevealLayer(screens, lang) {
     clone.removeAttribute("id");
     clone.removeAttribute("tabindex");
     clone.classList.add("lang-liquid-clone");
-    applyLangToSubtree(clone, lang);
-    patchHeadlineInClone(clone, lang);
-    patchAboutInClone(clone, lang);
+    clone.style.width = `${document.documentElement.clientWidth}px`;
+    patchLangInRoot(clone, lang);
     track.appendChild(clone);
   }
 
   reveal.appendChild(track);
   document.body.appendChild(reveal);
+  syncRevealLayout(track, screens);
 
-  return { reveal, track, clone };
+  return { reveal, track };
 }
 
 /** @param {() => void} apply @param {HTMLElement | null | undefined} originEl */
@@ -487,13 +400,13 @@ export function playLangTransition(apply, originEl) {
       const eased = easeOutCubic(t);
       const timeSec = (now - start) / 1000;
       const waveRadius = eased * maxRadius;
-      const revealRadius = Math.max(0, waveRadius - REVEAL_LAG_PX);
+      const revealRadius = revealRadiusFor(waveRadius, t);
       const waveProgress = waveRadius / maxRadius;
 
       setOldMask(screens, origin, revealRadius);
       setRevealMask(reveal, origin, revealRadius);
-      syncRevealScroll(track);
-      setPageWarp(t, screens);
+      syncRevealLayout(track, screens);
+      updateBandWarp(origin, revealRadius, waveRadius);
       if (hasGl) drawLiquid(waveProgress, timeSec, glOrigin);
 
       if (t < 1) {
@@ -501,7 +414,7 @@ export function playLangTransition(apply, originEl) {
       } else {
         apply();
         reveal.remove();
-        clearPageWarp(screens);
+        clearBandWarp();
         clearMask(screens);
         if (canvas) canvas.style.display = "none";
         busy = false;
@@ -510,7 +423,6 @@ export function playLangTransition(apply, originEl) {
     };
 
     setRevealMask(reveal, origin, 0);
-    syncRevealScroll(track);
     if (canvas) canvas.style.display = "block";
     requestAnimationFrame(frame);
   });

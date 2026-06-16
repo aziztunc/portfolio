@@ -28,17 +28,22 @@
 .lang-liquid-reveal__track {
   position: absolute;
   left: 0;
-  right: 0;
   top: 0;
   will-change: transform;
 }
 
 .lang-liquid-clone {
   margin: 0;
+  box-sizing: border-box;
 }
 
-#screens.lang-liquid-warp {
-  will-change: filter, mask-image;
+#screens.lang-liquid-masked {
+  will-change: mask-image;
+}
+
+#screens.lang-liquid-warp,
+.lang-liquid-warp {
+  will-change: filter;
 }
 
 .lang-liquid-reveal {
@@ -46,11 +51,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #screens.lang-liquid-warp {
+  #screens.lang-liquid-warp,
+  .lang-liquid-warp {
     filter: none !important;
+    will-change: auto;
+  }
+
+  #screens {
     mask-image: none !important;
     -webkit-mask-image: none !important;
-    will-change: auto;
   }
 
   .lang-liquid-reveal {
