@@ -6,8 +6,11 @@ import {
 } from "./i18n.js";
 import { getAboutContent } from "./about-content.js";
 
-const DURATION_MS = 900;
-const WARP_PEAK = 0.42;
+const DURATION_MS = 1500;
+const REVEAL_LAG_PX = 160;
+const REVEAL_FEATHER_PX = 56;
+const WARP_SCALE_MAX = 22;
+const WARP_PEAK = 0.38;
 
 const VERT = `#version 300 es
 in vec2 a_pos;
@@ -200,31 +203,67 @@ function drawLiquid(progress, time, origin) {
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-/** @param {number} progress @param {HTMLElement[]} targets */
-function setPageWarp(progress, targets) {
-  if (!displaceMap) return;
+/** @param {number} progress @param {HTMLElement | null} target */
+function setPageWarp(progress, target) {
+  if (!displaceMap || !target) return;
 
   const edge = 1 - Math.abs(progress - WARP_PEAK) / WARP_PEAK;
-  const scale = Math.max(0, edge) * 48;
+  const scale = Math.max(0, edge) * WARP_SCALE_MAX;
   displaceMap.setAttribute("scale", String(scale.toFixed(2)));
   if (displaceNoise) {
-    const freq = 0.016 + Math.max(0, edge) * 0.024;
-    displaceNoise.setAttribute("baseFrequency", `${freq.toFixed(4)} ${(freq * 3.2).toFixed(4)}`);
+    const freq = 0.014 + Math.max(0, edge) * 0.014;
+    displaceNoise.setAttribute("baseFrequency", `${freq.toFixed(4)} ${(freq * 2.8).toFixed(4)}`);
   }
 
-  for (const target of targets) {
-    target.classList.add("lang-liquid-warp");
-    target.style.filter = "url(#lang-liquid-displace)";
-  }
+  target.classList.add("lang-liquid-warp");
+  target.style.filter = "url(#lang-liquid-displace)";
 }
 
-/** @param {HTMLElement[]} targets */
-function clearPageWarp(targets) {
-  for (const target of targets) {
+/** @param {HTMLElement | null} target */
+function clearPageWarp(target) {
+  if (target) {
     target.classList.remove("lang-liquid-warp");
     target.style.filter = "";
   }
   if (displaceMap) displaceMap.setAttribute("scale", "0");
+}
+
+/** @param {HTMLElement} el @param {Point} origin @param {number} revealRadius */
+function setOldMask(el, origin, revealRadius) {
+  if (revealRadius <= 0) {
+    el.style.maskImage = "";
+    el.style.webkitMaskImage = "";
+    return;
+  }
+  const gradient = `radial-gradient(circle at ${origin.x}px ${origin.y}px, transparent ${revealRadius}px, #000 ${revealRadius + 1}px)`;
+  el.style.maskImage = gradient;
+  el.style.webkitMaskImage = gradient;
+}
+
+/** @param {HTMLElement} reveal @param {Point} origin @param {number} revealRadius */
+function setRevealMask(reveal, origin, revealRadius) {
+  if (revealRadius <= 0) {
+    reveal.style.clipPath = `circle(0px at ${origin.x}px ${origin.y}px)`;
+    reveal.style.maskImage = "";
+    reveal.style.webkitMaskImage = "";
+    reveal.style.opacity = "0";
+    return;
+  }
+
+  const fadeStart = Math.max(0, revealRadius - REVEAL_FEATHER_PX);
+  const gradient = `radial-gradient(circle at ${origin.x}px ${origin.y}px, #000 ${fadeStart}px, transparent ${revealRadius}px)`;
+  reveal.style.maskImage = gradient;
+  reveal.style.webkitMaskImage = gradient;
+  reveal.style.clipPath = `circle(${revealRadius + 2}px at ${origin.x}px ${origin.y}px)`;
+  reveal.style.opacity = "1";
+}
+
+/** @param {HTMLElement} el */
+function clearMask(el) {
+  el.style.maskImage = "";
+  el.style.webkitMaskImage = "";
+  el.style.clipPath = "";
+  el.style.opacity = "";
 }
 
 /** @param {HTMLElement} originEl */
@@ -256,10 +295,6 @@ function maxRevealRadius(origin) {
   return Math.max(...corners.map(([x, y]) => Math.hypot(x - origin.x, y - origin.y))) + 48;
 }
 
-/** @param {HTMLElement} reveal @param {Point} origin @param {number} radius */
-function setRevealClip(reveal, origin, radius) {
-  reveal.style.clipPath = `circle(${radius}px at ${origin.x}px ${origin.y}px)`;
-}
 
 /** @param {HTMLElement} track */
 function syncRevealScroll(track) {
@@ -446,31 +481,35 @@ export function playLangTransition(apply, originEl) {
 
   return new Promise((resolve) => {
     const start = performance.now();
-    const warpTargets = [screens, reveal];
 
     const frame = (now) => {
       const t = Math.min(1, (now - start) / DURATION_MS);
       const eased = easeOutCubic(t);
       const timeSec = (now - start) / 1000;
+      const waveRadius = eased * maxRadius;
+      const revealRadius = Math.max(0, waveRadius - REVEAL_LAG_PX);
+      const waveProgress = waveRadius / maxRadius;
 
-      setRevealClip(reveal, origin, eased * maxRadius);
+      setOldMask(screens, origin, revealRadius);
+      setRevealMask(reveal, origin, revealRadius);
       syncRevealScroll(track);
-      setPageWarp(t, warpTargets);
-      if (hasGl) drawLiquid(eased, timeSec, glOrigin);
+      setPageWarp(t, screens);
+      if (hasGl) drawLiquid(waveProgress, timeSec, glOrigin);
 
       if (t < 1) {
         requestAnimationFrame(frame);
       } else {
         apply();
         reveal.remove();
-        clearPageWarp(warpTargets);
+        clearPageWarp(screens);
+        clearMask(screens);
         if (canvas) canvas.style.display = "none";
         busy = false;
         resolve();
       }
     };
 
-    setRevealClip(reveal, origin, 0);
+    setRevealMask(reveal, origin, 0);
     syncRevealScroll(track);
     if (canvas) canvas.style.display = "block";
     requestAnimationFrame(frame);
