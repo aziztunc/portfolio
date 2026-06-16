@@ -19,6 +19,7 @@ export const copy = {
     "headline.initialBottom": "PRODUCT DESIGNER",
     "headline.typedBottom": "DESIGN ENGINEER();",
     "headline.scrambleBottom": "UX ENTHUSIAST",
+    "headline.layersTitle": "Layers",
     "placeholder.work.title": "Work",
     "placeholder.work.body": "Project showcase placeholder.",
     "placeholder.skills.title": "More",
@@ -42,6 +43,7 @@ export const copy = {
     "headline.initialBottom": "PRODUKTDESIGNER",
     "headline.typedBottom": "DESIGN ENGINEER();",
     "headline.scrambleBottom": "UX-ENTHUSIAST",
+    "headline.layersTitle": "Ebenen",
     "placeholder.work.title": "Arbeit",
     "placeholder.work.body": "Projekt-Portfolio Platzhalter.",
     "placeholder.skills.title": "Mehr",
@@ -132,5 +134,6 @@ export function getHeadlineCopy() {
     initialBottom: t("headline.initialBottom"),
     typedBottom: t("headline.typedBottom"),
     scrambleBottom: t("headline.scrambleBottom"),
+    layersTitle: t("headline.layersTitle"),
   };
 }

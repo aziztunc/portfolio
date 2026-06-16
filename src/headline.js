@@ -20,8 +20,11 @@ const CURSOR_TEXT_SVG = `
 </svg>
 `;
 
-const SCRAMBLE_CHARS =
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789()<>{}/\\;:.";
+const LAYER_ICON_SVG = `
+<svg viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
+  <rect x="1.5" y="1.5" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.25"/>
+</svg>
+`;
 
 function el(tag, className, attrs) {
   const node = document.createElement(tag);
@@ -125,6 +128,21 @@ export function createHeadline(host) {
   const sizeLabel = el("div", "headline__size-label");
   sizeLabel.textContent = "640 × 80";
 
+  const layersPanel = el("div", "headline__layers");
+  const layersHeader = el("div", "headline__layers-header");
+  const layersList = el("div", "headline__layers-list");
+  const layersRow = el("div", "headline__layers-row headline__layers-row--active");
+  const layersIcon = el("span", "headline__layers-icon");
+  layersIcon.innerHTML = LAYER_ICON_SVG;
+  const layersName = el("span", "headline__layers-name");
+  const layersCaret = el("span", "headline__layers-caret headline__caret");
+  layersRow.appendChild(layersIcon);
+  layersRow.appendChild(layersName);
+  layersRow.appendChild(layersCaret);
+  layersList.appendChild(layersRow);
+  layersPanel.appendChild(layersHeader);
+  layersPanel.appendChild(layersList);
+
   const cursor = el("div", "headline__cursor");
   cursor.innerHTML = CURSOR_ARROW_SVG;
 
@@ -135,6 +153,7 @@ export function createHeadline(host) {
   root.appendChild(bottom);
   root.appendChild(bottomFade);
   root.appendChild(metaBottom);
+  root.appendChild(layersPanel);
   root.appendChild(selection);
   root.appendChild(anchorTL);
   root.appendChild(anchorTR);
@@ -150,6 +169,7 @@ export function createHeadline(host) {
     metaTop.textContent = c.metaTop;
     top.textContent = c.top;
     metaBottom.textContent = c.metaBottom;
+    layersHeader.textContent = c.layersTitle;
   }
   applyStaticCopy();
 
@@ -165,6 +185,38 @@ export function createHeadline(host) {
     root.style.transform = `scale(${s})`;
   }
   applyScale();
+
+  function elementInRootCoords(node) {
+    const rootRect = root.getBoundingClientRect();
+    const r = node.getBoundingClientRect();
+    const s = currentScale || 1;
+    return {
+      x: (r.left - rootRect.left) / s,
+      y: (r.top - rootRect.top) / s,
+      w: r.width / s,
+      h: r.height / s,
+      cx: (r.left + r.width / 2 - rootRect.left) / s,
+      cy: (r.top + r.height / 2 - rootRect.top) / s,
+    };
+  }
+
+  function setLayerName(text) {
+    layersName.textContent = text;
+  }
+
+  function showLayerCaret(on) {
+    layersCaret.style.opacity = on ? "1" : "0";
+    layersCaret.classList.toggle("headline__layers-caret--blink", on);
+  }
+
+  function showLayersPanel(on) {
+    layersPanel.classList.toggle("headline__layers--visible", on);
+  }
+
+  async function slideLayersPanel(on) {
+    showLayersPanel(on);
+    await transitionEndOnce(layersPanel, "transform", 480);
+  }
 
   function measureBottomBox() {
     const rootRect = root.getBoundingClientRect();
@@ -354,31 +406,55 @@ export function createHeadline(host) {
     }
   }
 
-  async function scrambleTo(target, opts = {}) {
-    const stepMs = opts.stepMs ?? 28;
-    const settleStagger = opts.settleStagger ?? 2;
-    const start = bottomText.textContent;
-    const len = Math.max(start.length, target.length);
-    const padded = target.padEnd(len, " ");
-    let settled = 0;
-    const totalSteps = Math.ceil(len / settleStagger) + 8;
-    for (let step = 0; step < totalSteps; step++) {
-      let out = "";
-      for (let i = 0; i < len; i++) {
-        if (i < settled) {
-          out += padded[i];
-        } else if (padded[i] === " ") {
-          out += " ";
-        } else {
-          out += SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-        }
-      }
-      setBottomText(out.trimEnd());
-      settled = Math.min(len, settled + settleStagger);
-      await wait(stepMs);
-      if (settled >= len) break;
+  async function typeLayerName(text, perChar = 60) {
+    layersRow.classList.add("headline__layers-row--editing");
+    setLayerName("");
+    showLayerCaret(true);
+    for (let i = 0; i < text.length; i++) {
+      setLayerName(text.slice(0, i + 1));
+      await wait(perChar);
     }
-    setBottomText(target);
+  }
+
+  async function playLayersRename(currentLabel, targetLabel, startGen) {
+    setLayerName(currentLabel);
+    layersRow.classList.remove("headline__layers-row--editing");
+    showLayerCaret(false);
+    showLayersPanel(false);
+    void layersPanel.offsetWidth;
+
+    setCursor("arrow");
+    cursor.style.opacity = "1";
+
+    await slideLayersPanel(true);
+    if (generation !== startGen) return true;
+
+    await new Promise((r) => requestAnimationFrame(r));
+    const nameBox = elementInRootCoords(layersName);
+    const tipTarget = arrowTipAt(nameBox.cx, nameBox.cy);
+    await moveCursorTo(tipTarget.x, tipTarget.y, 520);
+    if (generation !== startGen) return true;
+
+    await scaleCursor(0.85, 70);
+    await scaleCursor(1, 90);
+    await wait(90);
+    await scaleCursor(0.85, 70);
+    await scaleCursor(1, 90);
+    await wait(180);
+    if (generation !== startGen) return true;
+
+    await typeLayerName(targetLabel, 60);
+    await wait(500);
+    if (generation !== startGen) return true;
+
+    setBottomText(targetLabel);
+    clearCharSyntax();
+    showLayerCaret(false);
+    layersRow.classList.remove("headline__layers-row--editing");
+
+    await wait(300);
+    await slideLayersPanel(false);
+    return false;
   }
 
   const ARROW_TIP_X = 4;
@@ -443,6 +519,9 @@ export function createHeadline(host) {
     showSelection(false);
     showHighlight(false);
     showCaret(false);
+    showLayersPanel(false);
+    showLayerCaret(false);
+    layersRow.classList.remove("headline__layers-row--editing");
 
     const startGen = generation;
     const resetIfStale = () => generation !== startGen;
@@ -589,7 +668,7 @@ export function createHeadline(host) {
     showCaret(false);
     await wait(450);
 
-    await scrambleTo(c.scrambleBottom, { stepMs: 28, settleStagger: 1 });
+    if (await playLayersRename(c.typedBottom, c.scrambleBottom, startGen)) return;
     await wait(1400);
     if (resetIfStale()) return;
 
