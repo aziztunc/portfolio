@@ -20,9 +20,18 @@
   will-change: filter;
 }
 
+.lang-liquid-swap {
+  will-change: opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lang-liquid-warp {
     filter: none !important;
+    will-change: auto;
+  }
+
+  .lang-liquid-swap {
+    opacity: 1 !important;
     will-change: auto;
   }
 }
