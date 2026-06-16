@@ -16,12 +16,35 @@
   pointer-events: none;
 }
 
-#screens.lang-liquid-warp {
+.lang-liquid-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+  pointer-events: none;
+  overflow: hidden;
+  will-change: clip-path;
+}
+
+.lang-liquid-reveal__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  will-change: transform;
+}
+
+.lang-liquid-clone {
+  margin: 0;
+}
+
+#screens.lang-liquid-warp,
+.lang-liquid-reveal.lang-liquid-warp {
   will-change: filter;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #screens.lang-liquid-warp {
+  #screens.lang-liquid-warp,
+  .lang-liquid-reveal.lang-liquid-warp {
     filter: none !important;
     will-change: auto;
   }

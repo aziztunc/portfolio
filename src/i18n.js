@@ -63,6 +63,51 @@ export function getLang() {
   return currentLang;
 }
 
+/** @returns {Lang} */
+export function getNextLang() {
+  return currentLang === "en" ? "de" : "en";
+}
+
+/** @param {Lang} lang @param {string} key */
+function textFor(lang, key) {
+  return copy[lang][key] ?? copy.en[key] ?? key;
+}
+
+/** @param {HTMLElement} root @param {Lang} lang */
+export function applyLangToSubtree(root, lang) {
+  root.querySelectorAll("[data-i18n]").forEach((node) => {
+    const key = node.getAttribute("data-i18n");
+    if (!key) return;
+    const value = textFor(lang, key);
+    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+      node.placeholder = value;
+    } else if (node instanceof HTMLAnchorElement && key.endsWith(".label")) {
+      node.setAttribute("aria-label", value);
+    } else {
+      node.textContent = value;
+    }
+  });
+
+  root.querySelectorAll("[data-i18n-aria]").forEach((node) => {
+    const key = node.getAttribute("data-i18n-aria");
+    if (key) node.setAttribute("aria-label", textFor(lang, key));
+  });
+}
+
+/** @param {Lang} lang */
+export function getHeadlineCopyForLang(lang) {
+  return {
+    aria: textFor(lang, "headline.aria"),
+    metaTop: textFor(lang, "headline.metaTop"),
+    top: textFor(lang, "headline.top"),
+    metaBottom: textFor(lang, "headline.metaBottom"),
+    initialBottom: textFor(lang, "headline.initialBottom"),
+    typedBottom: textFor(lang, "headline.typedBottom"),
+    scrambleBottom: textFor(lang, "headline.scrambleBottom"),
+    layersTitle: textFor(lang, "headline.layersTitle"),
+  };
+}
+
 /** @param {Lang} lang */
 export function setLang(lang) {
   if (lang === currentLang) return;

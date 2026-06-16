@@ -1,7 +1,13 @@
 import "./lang-transition.css";
+import {
+  applyLangToSubtree,
+  getHeadlineCopyForLang,
+  getNextLang,
+} from "./i18n.js";
+import { getAboutContent } from "./about-content.js";
 
-const DURATION_MS = 800;
-const SWAP_AT = 0.48;
+const DURATION_MS = 900;
+const WARP_PEAK = 0.42;
 
 const VERT = `#version 300 es
 in vec2 a_pos;
@@ -49,26 +55,26 @@ void main() {
   float maxDist = length(vec2(res.x / max(res.y, 1.0), 1.0));
 
   float waveFront = u_progress * maxDist * 1.35;
-  float band = 0.07 + 0.025 * sin(u_time * 7.0 + dist * 18.0);
+  float band = 0.06 + 0.02 * sin(u_time * 8.0 + dist * 20.0);
   float ring = abs(dist - waveFront);
   float liquid = smoothstep(band, 0.0, ring);
 
-  float wake = smoothstep(waveFront, waveFront - 0.28, dist);
-  wake *= 1.0 - smoothstep(waveFront - 0.28, waveFront - 0.5, dist);
+  float wake = smoothstep(waveFront, waveFront - 0.24, dist);
+  wake *= 1.0 - smoothstep(waveFront - 0.24, waveFront - 0.46, dist);
 
-  float ripple = sin((dist - waveFront) * 55.0 - u_time * 4.0) * 0.5 + 0.5;
-  ripple *= smoothstep(waveFront + 0.12, waveFront - 0.08, dist);
-  ripple *= smoothstep(waveFront - 0.35, waveFront - 0.12, dist);
+  float ripple = sin((dist - waveFront) * 58.0 - u_time * 4.5) * 0.5 + 0.5;
+  ripple *= smoothstep(waveFront + 0.1, waveFront - 0.06, dist);
+  ripple *= smoothstep(waveFront - 0.32, waveFront - 0.1, dist);
 
-  float n = noise(diff * 14.0 + vec2(u_time * 0.6, -u_time * 0.35));
-  float intensity = clamp(liquid * 0.75 + wake * 0.22 + ripple * 0.18, 0.0, 1.0);
+  float n = noise(diff * 16.0 + vec2(u_time * 0.7, -u_time * 0.4));
+  float intensity = clamp(liquid * 0.8 + wake * 0.24 + ripple * 0.2, 0.0, 1.0);
 
   vec3 aqua = vec3(0.2, 0.73, 1.0);
   vec3 foam = vec3(0.77, 0.89, 0.94);
   vec3 deep = vec3(0.09, 0.11, 0.14);
   vec3 col = mix(deep, mix(aqua, foam, n), 0.55 + n * 0.35);
 
-  outColor = vec4(col, intensity * 0.72);
+  outColor = vec4(col, intensity * 0.78);
 }`;
 
 let busy = false;
@@ -86,6 +92,12 @@ let uniforms = null;
 let displaceMap = null;
 /** @type {SVGElement | null} */
 let displaceNoise = null;
+
+/** @typedef {{ x: number; y: number }} Point */
+
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
 
 function ensureSvgFilter() {
   if (displaceMap) return;
@@ -173,7 +185,7 @@ function resizeCanvas() {
   }
 }
 
-/** @param {number} progress @param {number} time @param {{ x: number; y: number }} origin */
+/** @param {number} progress @param {number} time @param {Point} origin */
 function drawLiquid(progress, time, origin) {
   if (!gl || !program || !canvas || !uniforms) return;
   resizeCanvas();
@@ -188,38 +200,225 @@ function drawLiquid(progress, time, origin) {
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-/** @param {number} progress */
-function setPageWarp(progress) {
-  const screens = document.getElementById("screens");
-  if (!screens || !displaceMap) return;
+/** @param {number} progress @param {HTMLElement[]} targets */
+function setPageWarp(progress, targets) {
+  if (!displaceMap) return;
 
-  const peak = 1 - Math.abs(progress - 0.5) * 2;
-  const scale = peak * 42;
+  const edge = 1 - Math.abs(progress - WARP_PEAK) / WARP_PEAK;
+  const scale = Math.max(0, edge) * 48;
   displaceMap.setAttribute("scale", String(scale.toFixed(2)));
   if (displaceNoise) {
-    const freq = 0.018 + peak * 0.02;
-    displaceNoise.setAttribute("baseFrequency", `${freq.toFixed(4)} ${(freq * 3.1).toFixed(4)}`);
+    const freq = 0.016 + Math.max(0, edge) * 0.024;
+    displaceNoise.setAttribute("baseFrequency", `${freq.toFixed(4)} ${(freq * 3.2).toFixed(4)}`);
   }
-  screens.classList.add("lang-liquid-warp");
-  screens.style.filter = "url(#lang-liquid-displace)";
+
+  for (const target of targets) {
+    target.classList.add("lang-liquid-warp");
+    target.style.filter = "url(#lang-liquid-displace)";
+  }
 }
 
-function clearPageWarp() {
-  const screens = document.getElementById("screens");
-  if (screens) {
-    screens.classList.remove("lang-liquid-warp");
-    screens.style.filter = "";
+/** @param {HTMLElement[]} targets */
+function clearPageWarp(targets) {
+  for (const target of targets) {
+    target.classList.remove("lang-liquid-warp");
+    target.style.filter = "";
   }
   if (displaceMap) displaceMap.setAttribute("scale", "0");
 }
 
 /** @param {HTMLElement} originEl */
-function getOrigin(originEl) {
+function getOriginViewport(originEl) {
   const rect = originEl.getBoundingClientRect();
   return {
     x: rect.left + rect.width / 2,
-    y: window.innerHeight - (rect.top + rect.height / 2),
+    y: rect.top + rect.height / 2,
   };
+}
+
+/** @param {Point} origin */
+function getOriginGl(origin) {
+  return {
+    x: origin.x,
+    y: window.innerHeight - origin.y,
+  };
+}
+
+/** @param {Point} origin */
+function maxRevealRadius(origin) {
+  const { innerWidth: w, innerHeight: h } = window;
+  const corners = [
+    [0, 0],
+    [w, 0],
+    [0, h],
+    [w, h],
+  ];
+  return Math.max(...corners.map(([x, y]) => Math.hypot(x - origin.x, y - origin.y))) + 48;
+}
+
+/** @param {HTMLElement} reveal @param {Point} origin @param {number} radius */
+function setRevealClip(reveal, origin, radius) {
+  reveal.style.clipPath = `circle(${radius}px at ${origin.x}px ${origin.y}px)`;
+}
+
+/** @param {HTMLElement} track */
+function syncRevealScroll(track) {
+  const scroller = document.scrollingElement || document.documentElement;
+  track.style.transform = `translate3d(0, ${-scroller.scrollTop}px, 0)`;
+}
+
+/** @param {HTMLElement} root @param {"en" | "de"} lang */
+function patchHeadlineInClone(root, lang) {
+  const c = getHeadlineCopyForLang(lang);
+  const old = getHeadlineCopyForLang(lang === "en" ? "de" : "en");
+  const frame = root.querySelector(".headline__frame");
+  if (frame) frame.setAttribute("aria-label", c.aria);
+
+  const metaTop = root.querySelector(".headline__meta--top");
+  const top = root.querySelector(".headline__line--top");
+  const metaBottom = root.querySelector(".headline__meta--bottom");
+  const layersHeader = root.querySelector(".headline__layers-header");
+  const bottomText = root.querySelector(".headline__bottom-text");
+  const layersName = root.querySelector(".headline__layers-name");
+
+  if (metaTop) metaTop.textContent = c.metaTop;
+  if (top) top.textContent = c.top;
+  if (metaBottom) metaBottom.textContent = c.metaBottom;
+  if (layersHeader) layersHeader.textContent = c.layersTitle;
+
+  if (bottomText) {
+    const current = bottomText.textContent?.trim() ?? "";
+    let nextBottom = c.initialBottom;
+    if (current === old.typedBottom || current.includes("(")) {
+      nextBottom = c.typedBottom;
+    } else if (current === old.scrambleBottom) {
+      nextBottom = c.scrambleBottom;
+    }
+    bottomText.textContent = nextBottom;
+  }
+
+  if (layersName) layersName.textContent = c.scrambleBottom;
+}
+
+/** @param {HTMLElement} root @param {"en" | "de"} lang */
+function patchAboutInClone(root, lang) {
+  const content = getAboutContent(lang);
+
+  const greeting = root.querySelector("[data-about='greeting']");
+  const meta = root.querySelector("[data-about='meta']");
+  const introP1 = root.querySelector("[data-about='intro-p1']");
+  const introP2 = root.querySelector("[data-about='intro-p2']");
+  const imgLabel = root.querySelector("[data-about='img-label']");
+  const imgMeta = root.querySelector("[data-about='img-meta']");
+  const img = root.querySelector("[data-about='img']");
+
+  if (greeting) greeting.textContent = content.greeting;
+  if (meta) meta.textContent = content.meta;
+  if (introP1) introP1.textContent = content.introP1;
+  if (introP2) introP2.textContent = content.introP2;
+  if (imgLabel) imgLabel.textContent = content.imgLabel;
+  if (imgMeta) imgMeta.textContent = content.imgMeta;
+  if (img) img.setAttribute("alt", content.imgAlt);
+
+  const title = root.querySelector(".about-timeline__title");
+  const mode = root.querySelector(".about-timeline__mode");
+  const hint = root.querySelector(".about-timeline__hint");
+  if (title) title.textContent = content.timelineTitle;
+  if (mode) mode.textContent = `[${content.timelineMode}]`;
+  if (hint) hint.textContent = content.timelineHint;
+
+  const activeButton =
+    root.querySelector(".about-timeline__node--active .about-timeline__button") ??
+    root.querySelector(".about-timeline__button");
+  const activeId = activeButton?.dataset.nodeId ?? content.nodes[0]?.id ?? "01";
+  const activeNode = content.nodes.find((node) => node.id === activeId) ?? content.nodes[0];
+
+  root.querySelectorAll(".about-timeline__button").forEach((button) => {
+    const node = content.nodes.find((entry) => entry.id === button.dataset.nodeId);
+    if (!node) return;
+    const period = button.querySelector(".about-timeline__node-period");
+    const nodeTitle = button.querySelector(".about-timeline__node-title");
+    const summary = button.querySelector(".about-timeline__node-summary");
+    if (period) period.textContent = node.period;
+    if (nodeTitle) nodeTitle.textContent = node.title;
+    if (summary) summary.textContent = node.summary;
+    button.setAttribute("aria-label", `${node.period}: ${node.title}`);
+  });
+
+  if (activeNode) {
+    const detail = root.querySelector(".about-timeline__detail");
+    if (detail) {
+      const detailMeta = detail.querySelector(".about-timeline__detail-meta");
+      const period = detail.querySelector(".about-timeline__detail-period");
+      const detailTitle = detail.querySelector(".about-timeline__detail-title");
+      const subtitle = detail.querySelector(".about-timeline__detail-subtitle");
+      const bullets = detail.querySelector(".about-timeline__bullets");
+      const tags = detail.querySelector(".about-timeline__tags");
+
+      if (detailMeta) detailMeta.textContent = `${content.selectedPrefix} ${activeNode.id}`;
+      if (period) period.textContent = activeNode.period;
+      if (detailTitle) detailTitle.textContent = activeNode.title;
+      if (subtitle) subtitle.textContent = activeNode.subtitle;
+
+      if (bullets) {
+        bullets.innerHTML = "";
+        for (const point of activeNode.bullets) {
+          const li = document.createElement("li");
+          li.textContent = point;
+          bullets.appendChild(li);
+        }
+      }
+
+      if (tags) {
+        tags.innerHTML = "";
+        for (const tag of activeNode.tags) {
+          const span = document.createElement("span");
+          span.className = "about-timeline__tag";
+          span.textContent = tag;
+          tags.appendChild(span);
+        }
+      }
+    }
+  }
+
+  const currentlyTitle = root.querySelector(".about-currently__title");
+  const currentlyList = root.querySelector(".about-currently__list");
+  if (currentlyTitle) currentlyTitle.textContent = content.currentlyTitle;
+  if (currentlyList) {
+    currentlyList.innerHTML = "";
+    for (const item of content.currentlyItems) {
+      const li = document.createElement("li");
+      li.className = "about-currently__item";
+      li.textContent = item;
+      currentlyList.appendChild(li);
+    }
+  }
+}
+
+/** @param {HTMLElement} screens @param {"en" | "de"} lang */
+function createRevealLayer(screens, lang) {
+  const reveal = document.createElement("div");
+  reveal.className = "lang-liquid-reveal";
+  reveal.setAttribute("aria-hidden", "true");
+
+  const track = document.createElement("div");
+  track.className = "lang-liquid-reveal__track";
+
+  const clone = screens.cloneNode(true);
+  if (clone instanceof HTMLElement) {
+    clone.removeAttribute("id");
+    clone.removeAttribute("tabindex");
+    clone.classList.add("lang-liquid-clone");
+    applyLangToSubtree(clone, lang);
+    patchHeadlineInClone(clone, lang);
+    patchAboutInClone(clone, lang);
+    track.appendChild(clone);
+  }
+
+  reveal.appendChild(track);
+  document.body.appendChild(reveal);
+
+  return { reveal, track, clone };
 }
 
 /** @param {() => void} apply @param {HTMLElement | null | undefined} originEl */
@@ -230,39 +429,49 @@ export function playLangTransition(apply, originEl) {
     return Promise.resolve();
   }
 
+  const screens = document.getElementById("screens");
+  if (!screens || !originEl) {
+    apply();
+    return Promise.resolve();
+  }
+
   busy = true;
   ensureSvgFilter();
   const hasGl = ensureGl();
-  const origin = originEl
-    ? getOrigin(originEl)
-    : { x: window.innerWidth * 0.85, y: window.innerHeight * 0.92 };
+  const origin = getOriginViewport(originEl);
+  const glOrigin = getOriginGl(origin);
+  const maxRadius = maxRevealRadius(origin);
+  const nextLang = getNextLang();
+  const { reveal, track } = createRevealLayer(screens, nextLang);
 
   return new Promise((resolve) => {
-    let swapped = false;
     const start = performance.now();
+    const warpTargets = [screens, reveal];
 
     const frame = (now) => {
       const t = Math.min(1, (now - start) / DURATION_MS);
+      const eased = easeOutCubic(t);
       const timeSec = (now - start) / 1000;
 
-      if (!swapped && t >= SWAP_AT) {
-        swapped = true;
-        apply();
-      }
-
-      setPageWarp(t);
-      if (hasGl) drawLiquid(t, timeSec, origin);
+      setRevealClip(reveal, origin, eased * maxRadius);
+      syncRevealScroll(track);
+      setPageWarp(t, warpTargets);
+      if (hasGl) drawLiquid(eased, timeSec, glOrigin);
 
       if (t < 1) {
         requestAnimationFrame(frame);
       } else {
-        clearPageWarp();
+        apply();
+        reveal.remove();
+        clearPageWarp(warpTargets);
         if (canvas) canvas.style.display = "none";
         busy = false;
         resolve();
       }
     };
 
+    setRevealClip(reveal, origin, 0);
+    syncRevealScroll(track);
     if (canvas) canvas.style.display = "block";
     requestAnimationFrame(frame);
   });
