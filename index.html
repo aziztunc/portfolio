@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aziz Tunc · Product Designer</title>
+    <meta
+      name="description"
+      content="Aziz Tunc — multidisciplinary product designer and design engineer based in Cologne."
+    />
+    <meta name="theme-color" content="#17191c" />
+    <script>
+      if (!location.hash || location.hash === "#home") {
+        document.documentElement.classList.add("home-entrance");
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#screens">Skip to content</a>
+
+    <header class="site-header">
+      <a
+        class="site-header__logo"
+        href="#home"
+        data-i18n-aria="logo.label"
+        aria-label="Aziz Tunc — Home"
+        >AZIZ<span class="site-header__logo-dot" aria-hidden="true">.</span
+        ><span class="site-header__logo-grow site-header__logo-grow--tunc" aria-hidden="true"
+          ><span>TUNC</span></span
+        ></a
+      >
+      <nav class="site-header__nav" aria-label="Primary">
+        <a class="nav-link" href="#work" data-i18n="nav.work">Showcase</a>
+        <a class="nav-link" href="#skills" data-i18n="nav.skills">More</a>
+        <a class="nav-link" href="#about" data-i18n="nav.about">About</a>
+      </nav>
+      <button
+        class="experiment-button experiment-button--solid site-header__cta"
+        type="button"
+        id="lang-toggle"
+        aria-label="Switch language"
+      >
+        <canvas class="experiment-button__canvas" aria-hidden="true"></canvas>
+        <span class="experiment-button__label" data-i18n="cta.lang">DE</span>
+      </button>
+    </header>
+
+    <main class="screens" id="screens" tabindex="-1">
+      <section class="screen screen--home" id="home">
+        <div class="headline-host" id="headline-host"></div>
+        <a class="screen__scroll-hint" href="#work" data-i18n-aria="scroll.label" aria-label="Scroll to work">
+          <span class="screen__scroll-hint-arrow">
+            <svg viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path
+                d="M12 2 L12 28 M4 20 L12 28 L20 20"
+                stroke="currentColor"
+                stroke-width="2"
+                fill="none"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+        </a>
+      </section>
+
+      <section class="screen" id="work">
+        <div class="placeholder-section screen__inner">
+          <h2 class="h2" data-i18n="placeholder.work.title">Work</h2>
+          <div class="placeholder-section__box" data-i18n="placeholder.work.body">
+            Project showcase placeholder.
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="skills">
+        <div class="placeholder-section screen__inner">
+          <h2 class="h2" data-i18n="placeholder.skills.title">More</h2>
+          <div class="placeholder-section__box" data-i18n="placeholder.skills.body">
+            Skills and extras placeholder.
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="about">
+        <div class="placeholder-section screen__inner">
+          <h2 class="h2" data-i18n="placeholder.about.title">About</h2>
+          <div class="placeholder-section__box" data-i18n="placeholder.about.body">
+            About section placeholder.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
