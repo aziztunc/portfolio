@@ -6,10 +6,12 @@ import "./about.css";
 import "./button.js";
 import "./screens.js";
 import { initI18n, toggleLang } from "./i18n.js";
+import { cleanupStuckLangTransition } from "./lang-transition.js";
 import { createHeadline } from "./headline.js";
 import { initAbout } from "./about.js";
 
 initI18n();
+cleanupStuckLangTransition();
 
 const langButton = document.getElementById("lang-toggle");
 if (langButton) {

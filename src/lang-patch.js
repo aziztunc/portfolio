@@ -35,9 +35,8 @@ export function patchHeadlineInRoot(root, lang) {
 }
 
 /** @param {HTMLElement} root @param {"en" | "de"} lang */
-export function patchAboutInRoot(root, lang) {
+export function patchAboutIntro(root, lang) {
   const content = getAboutContent(lang);
-
   const greeting = root.querySelector("[data-about='greeting']");
   const meta = root.querySelector("[data-about='meta']");
   const introP1 = root.querySelector("[data-about='intro-p1']");
@@ -53,6 +52,11 @@ export function patchAboutInRoot(root, lang) {
   if (imgLabel) imgLabel.textContent = content.imgLabel;
   if (imgMeta) imgMeta.textContent = content.imgMeta;
   if (img) img.setAttribute("alt", content.imgAlt);
+}
+
+/** @param {HTMLElement} root @param {"en" | "de"} lang */
+export function patchAboutTimeline(root, lang) {
+  const content = getAboutContent(lang);
 
   const title = root.querySelector(".about-timeline__title");
   const mode = root.querySelector(".about-timeline__mode");
@@ -79,54 +83,64 @@ export function patchAboutInRoot(root, lang) {
     button.setAttribute("aria-label", `${node.period}: ${node.title}`);
   });
 
-  if (activeNode) {
-    const detail = root.querySelector(".about-timeline__detail");
-    if (detail) {
-      const detailMeta = detail.querySelector(".about-timeline__detail-meta");
-      const period = detail.querySelector(".about-timeline__detail-period");
-      const detailTitle = detail.querySelector(".about-timeline__detail-title");
-      const subtitle = detail.querySelector(".about-timeline__detail-subtitle");
-      const bullets = detail.querySelector(".about-timeline__bullets");
-      const tags = detail.querySelector(".about-timeline__tags");
+  if (!activeNode) return;
+  const detail = root.querySelector(".about-timeline__detail");
+  if (!detail) return;
 
-      if (detailMeta) detailMeta.textContent = `${content.selectedPrefix} ${activeNode.id}`;
-      if (period) period.textContent = activeNode.period;
-      if (detailTitle) detailTitle.textContent = activeNode.title;
-      if (subtitle) subtitle.textContent = activeNode.subtitle;
+  const detailMeta = detail.querySelector(".about-timeline__detail-meta");
+  const period = detail.querySelector(".about-timeline__detail-period");
+  const detailTitle = detail.querySelector(".about-timeline__detail-title");
+  const subtitle = detail.querySelector(".about-timeline__detail-subtitle");
+  const bullets = detail.querySelector(".about-timeline__bullets");
+  const tags = detail.querySelector(".about-timeline__tags");
 
-      if (bullets) {
-        bullets.innerHTML = "";
-        for (const point of activeNode.bullets) {
-          const li = document.createElement("li");
-          li.textContent = point;
-          bullets.appendChild(li);
-        }
-      }
+  if (detailMeta) detailMeta.textContent = `${content.selectedPrefix} ${activeNode.id}`;
+  if (period) period.textContent = activeNode.period;
+  if (detailTitle) detailTitle.textContent = activeNode.title;
+  if (subtitle) subtitle.textContent = activeNode.subtitle;
 
-      if (tags) {
-        tags.innerHTML = "";
-        for (const tag of activeNode.tags) {
-          const span = document.createElement("span");
-          span.className = "about-timeline__tag";
-          span.textContent = tag;
-          tags.appendChild(span);
-        }
-      }
+  if (bullets) {
+    bullets.innerHTML = "";
+    for (const point of activeNode.bullets) {
+      const li = document.createElement("li");
+      li.textContent = point;
+      bullets.appendChild(li);
     }
   }
 
+  if (tags) {
+    tags.innerHTML = "";
+    for (const tag of activeNode.tags) {
+      const span = document.createElement("span");
+      span.className = "about-timeline__tag";
+      span.textContent = tag;
+      tags.appendChild(span);
+    }
+  }
+}
+
+/** @param {HTMLElement} root @param {"en" | "de"} lang */
+export function patchAboutCurrently(root, lang) {
+  const content = getAboutContent(lang);
   const currentlyTitle = root.querySelector(".about-currently__title");
   const currentlyList = root.querySelector(".about-currently__list");
   if (currentlyTitle) currentlyTitle.textContent = content.currentlyTitle;
-  if (currentlyList) {
-    currentlyList.innerHTML = "";
-    for (const item of content.currentlyItems) {
-      const li = document.createElement("li");
-      li.className = "about-currently__item";
-      li.textContent = item;
-      currentlyList.appendChild(li);
-    }
+  if (!currentlyList) return;
+
+  currentlyList.innerHTML = "";
+  for (const item of content.currentlyItems) {
+    const li = document.createElement("li");
+    li.className = "about-currently__item";
+    li.textContent = item;
+    currentlyList.appendChild(li);
   }
+}
+
+/** @param {HTMLElement} root @param {"en" | "de"} lang */
+export function patchAboutInRoot(root, lang) {
+  patchAboutIntro(root, lang);
+  patchAboutTimeline(root, lang);
+  patchAboutCurrently(root, lang);
 }
 
 /** @param {HTMLElement} root @param {"en" | "de"} lang */

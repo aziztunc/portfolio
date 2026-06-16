@@ -1,12 +1,15 @@
 import "./lang-transition.css";
-import { getNextLang } from "./i18n.js";
-import { patchLangInRoot } from "./lang-patch.js";
+import { applyLangToSubtree, getNextLang } from "./i18n.js";
+import {
+  patchAboutCurrently,
+  patchAboutIntro,
+  patchAboutTimeline,
+  patchHeadlineInRoot,
+} from "./lang-patch.js";
 
 const DURATION_MS = 1500;
-const WARP_BAND_PX = 44;
-const REVEAL_FEATHER_PX = 10;
+const WARP_BAND_PX = 48;
 const WARP_SCALE_MAX = 20;
-const SETTLE_START = 0.9;
 
 const VERT = `#version 300 es
 in vec2 a_pos;
@@ -89,14 +92,14 @@ let quad = null;
 let uniforms = null;
 /** @type {SVGElement | null} */
 let displaceMap = null;
-/** @type {SVGElement | null} */
-let displaceNoise = null;
 
-const WARP_TARGETS =
-  "[data-i18n], [data-about], .headline__meta, .headline__line, .headline__layers, .about-timeline__detail, .about-timeline__button, .about-currently__title, .about-currently__item, .placeholder-section__box, .h2";
+/** @typedef {{ x: number; y: number }} Point */
+/** @typedef {{ node: HTMLElement; patch: (lang: "en" | "de") => void }} SwapUnit */
 
 /** @type {Set<HTMLElement>} */
 const warpedElements = new Set();
+/** @type {Set<HTMLElement>} */
+const swappedUnits = new Set();
 
 function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
@@ -117,7 +120,6 @@ function ensureSvgFilter() {
   `;
   document.body.appendChild(svg);
   displaceMap = svg.querySelector("#lang-liquid-map");
-  displaceNoise = svg.querySelector("#lang-liquid-noise");
 }
 
 function compileShader(type, source) {
@@ -203,8 +205,6 @@ function drawLiquid(progress, time, origin) {
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
-/** @typedef {{ x: number; y: number }} Point */
-
 function elementCenter(el) {
   const rect = el.getBoundingClientRect();
   return {
@@ -213,25 +213,118 @@ function elementCenter(el) {
   };
 }
 
-/** @param {Point} origin @param {number} revealRadius @param {number} waveRadius */
-function updateBandWarp(origin, revealRadius, waveRadius) {
+function distanceFromOrigin(el, origin) {
+  const center = elementCenter(el);
+  return Math.hypot(center.x - origin.x, center.y - origin.y);
+}
+
+function cleanupTransitionArtifacts() {
+  document.querySelectorAll(".lang-liquid-reveal").forEach((node) => node.remove());
+  clearBandWarp();
+  swappedUnits.clear();
+
+  const screens = document.getElementById("screens");
+  if (screens) {
+    screens.classList.remove("lang-liquid-masked");
+    screens.style.maskImage = "";
+    screens.style.webkitMaskImage = "";
+    screens.style.filter = "";
+  }
+}
+
+/** @param {HTMLElement} screens @returns {SwapUnit[]} */
+function buildSwapUnits(screens) {
+  const about = screens.querySelector("[data-about-root]");
+  /** @type {SwapUnit[]} */
+  const units = [];
+
+  const headline = screens.querySelector("#headline-host");
+  if (headline instanceof HTMLElement) {
+    units.push({
+      node: headline,
+      patch: (lang) => patchHeadlineInRoot(headline, lang),
+    });
+  }
+
+  const work = screens.querySelector("#work");
+  if (work instanceof HTMLElement) {
+    units.push({
+      node: work,
+      patch: (lang) => applyLangToSubtree(work, lang),
+    });
+  }
+
+  const skills = screens.querySelector("#skills");
+  if (skills instanceof HTMLElement) {
+    units.push({
+      node: skills,
+      patch: (lang) => applyLangToSubtree(skills, lang),
+    });
+  }
+
+  if (about instanceof HTMLElement) {
+    const intro = about.querySelector(".about-intro");
+    if (intro instanceof HTMLElement) {
+      units.push({
+        node: intro,
+        patch: (lang) => patchAboutIntro(about, lang),
+      });
+    }
+
+    const timeline = about.querySelector(".about-timeline");
+    if (timeline instanceof HTMLElement) {
+      units.push({
+        node: timeline,
+        patch: (lang) => patchAboutTimeline(about, lang),
+      });
+    }
+
+    const currently = about.querySelector(".about-currently");
+    if (currently instanceof HTMLElement) {
+      units.push({
+        node: currently,
+        patch: (lang) => patchAboutCurrently(about, lang),
+      });
+    }
+  }
+
+  return units;
+}
+
+/** @param {SwapUnit[]} units @param {Point} origin @param {number} swapRadius @param {"en" | "de"} lang */
+function swapUnitsInWave(units, origin, swapRadius, lang) {
+  for (const unit of units) {
+    if (swappedUnits.has(unit.node)) continue;
+    if (distanceFromOrigin(unit.node, origin) > swapRadius) continue;
+    unit.patch(lang);
+    swappedUnits.add(unit.node);
+    unit.node.style.filter = "";
+    unit.node.classList.remove("lang-liquid-warp");
+    warpedElements.delete(unit.node);
+  }
+}
+
+/** @param {SwapUnit[]} units @param {Point} origin @param {number} swapRadius @param {number} waveRadius */
+function updateBandWarp(units, origin, swapRadius, waveRadius) {
   if (!displaceMap) return;
 
-  const active = waveRadius > revealRadius + 4;
+  const active = waveRadius > swapRadius + 4;
   displaceMap.setAttribute("scale", active ? String(WARP_SCALE_MAX) : "0");
 
   const next = new Set();
-  if (active) {
-    document.querySelectorAll(WARP_TARGETS).forEach((node) => {
-      if (!(node instanceof HTMLElement)) return;
-      const center = elementCenter(node);
-      const dist = Math.hypot(center.x - origin.x, center.y - origin.y);
-      if (dist >= revealRadius && dist <= waveRadius + 24) {
-        node.classList.add("lang-liquid-warp");
-        node.style.filter = "url(#lang-liquid-displace)";
-        next.add(node);
-      }
-    });
+  if (!active) {
+    clearBandWarp();
+    return;
+  }
+
+  for (const unit of units) {
+    if (swappedUnits.has(unit.node)) continue;
+    const dist = distanceFromOrigin(unit.node, origin);
+    if (dist >= swapRadius && dist <= waveRadius + 28) {
+      unit.node.classList.add("lang-liquid-warp");
+      unit.node.style.filter = "url(#lang-liquid-displace)";
+      next.add(unit.node);
+    }
   }
 
   for (const node of warpedElements) {
@@ -240,6 +333,7 @@ function updateBandWarp(origin, revealRadius, waveRadius) {
       node.style.filter = "";
     }
   }
+
   warpedElements.clear();
   for (const node of next) warpedElements.add(node);
 }
@@ -251,47 +345,6 @@ function clearBandWarp() {
   }
   warpedElements.clear();
   if (displaceMap) displaceMap.setAttribute("scale", "0");
-}
-
-/** @param {HTMLElement} el @param {Point} origin @param {number} revealRadius */
-function setOldMask(el, origin, revealRadius) {
-  if (revealRadius <= 0) {
-    el.classList.remove("lang-liquid-masked");
-    el.style.maskImage = "";
-    el.style.webkitMaskImage = "";
-    return;
-  }
-  el.classList.add("lang-liquid-masked");
-  const gradient = `radial-gradient(circle at ${origin.x}px ${origin.y}px, transparent ${revealRadius}px, #000 ${revealRadius + 1}px)`;
-  el.style.maskImage = gradient;
-  el.style.webkitMaskImage = gradient;
-}
-
-/** @param {HTMLElement} reveal @param {Point} origin @param {number} revealRadius */
-function setRevealMask(reveal, origin, revealRadius) {
-  if (revealRadius <= 0) {
-    reveal.style.clipPath = `circle(0px at ${origin.x}px ${origin.y}px)`;
-    reveal.style.maskImage = "";
-    reveal.style.webkitMaskImage = "";
-    reveal.style.opacity = "0";
-    return;
-  }
-
-  const fadeStart = Math.max(0, revealRadius - REVEAL_FEATHER_PX);
-  const gradient = `radial-gradient(circle at ${origin.x}px ${origin.y}px, #000 ${fadeStart}px, transparent ${revealRadius}px)`;
-  reveal.style.maskImage = gradient;
-  reveal.style.webkitMaskImage = gradient;
-  reveal.style.clipPath = `circle(${revealRadius + 1}px at ${origin.x}px ${origin.y}px)`;
-  reveal.style.opacity = "1";
-}
-
-/** @param {HTMLElement} el */
-function clearMask(el) {
-  el.classList.remove("lang-liquid-masked");
-  el.style.maskImage = "";
-  el.style.webkitMaskImage = "";
-  el.style.clipPath = "";
-  el.style.opacity = "";
 }
 
 /** @param {HTMLElement} originEl */
@@ -312,7 +365,7 @@ function getOriginGl(origin) {
 }
 
 /** @param {Point} origin */
-function maxRevealRadius(origin) {
+function maxWaveRadius(origin) {
   const { innerWidth: w, innerHeight: h } = window;
   const corners = [
     [0, 0],
@@ -323,50 +376,10 @@ function maxRevealRadius(origin) {
   return Math.max(...corners.map(([x, y]) => Math.hypot(x - origin.x, y - origin.y))) + 48;
 }
 
-/** @param {number} t @param {number} waveRadius */
-function revealRadiusFor(waveRadius, t) {
-  if (t >= 1) return waveRadius;
-  if (t >= SETTLE_START) {
-    const settle = (t - SETTLE_START) / (1 - SETTLE_START);
-    const band = WARP_BAND_PX * (1 - settle);
-    return Math.max(0, waveRadius - band);
-  }
-  return Math.max(0, waveRadius - WARP_BAND_PX);
-}
-
-/** @param {HTMLElement} track @param {HTMLElement} screens */
-function syncRevealLayout(track, screens) {
-  const scroller = document.scrollingElement || document.documentElement;
-  const pageWidth = document.documentElement.clientWidth;
-  track.style.width = `${pageWidth}px`;
-  track.style.minHeight = `${screens.offsetHeight}px`;
-  track.style.transform = `translate3d(0, ${-scroller.scrollTop}px, 0)`;
-}
-
-/** @param {HTMLElement} screens @param {"en" | "de"} lang */
-function createRevealLayer(screens, lang) {
-  const reveal = document.createElement("div");
-  reveal.className = "lang-liquid-reveal";
-  reveal.setAttribute("aria-hidden", "true");
-
-  const track = document.createElement("div");
-  track.className = "lang-liquid-reveal__track";
-
-  const clone = screens.cloneNode(true);
-  if (clone instanceof HTMLElement) {
-    clone.removeAttribute("id");
-    clone.removeAttribute("tabindex");
-    clone.classList.add("lang-liquid-clone");
-    clone.style.width = `${document.documentElement.clientWidth}px`;
-    patchLangInRoot(clone, lang);
-    track.appendChild(clone);
-  }
-
-  reveal.appendChild(track);
-  document.body.appendChild(reveal);
-  syncRevealLayout(track, screens);
-
-  return { reveal, track };
+/** Remove any leftover overlay layers from a previous broken transition. */
+export function cleanupStuckLangTransition() {
+  cleanupTransitionArtifacts();
+  busy = false;
 }
 
 /** @param {() => void} apply @param {HTMLElement | null | undefined} originEl */
@@ -383,14 +396,15 @@ export function playLangTransition(apply, originEl) {
     return Promise.resolve();
   }
 
+  cleanupTransitionArtifacts();
   busy = true;
   ensureSvgFilter();
   const hasGl = ensureGl();
   const origin = getOriginViewport(originEl);
   const glOrigin = getOriginGl(origin);
-  const maxRadius = maxRevealRadius(origin);
+  const maxRadius = maxWaveRadius(origin);
   const nextLang = getNextLang();
-  const { reveal, track } = createRevealLayer(screens, nextLang);
+  const swapUnits = buildSwapUnits(screens);
 
   return new Promise((resolve) => {
     const start = performance.now();
@@ -400,29 +414,28 @@ export function playLangTransition(apply, originEl) {
       const eased = easeOutCubic(t);
       const timeSec = (now - start) / 1000;
       const waveRadius = eased * maxRadius;
-      const revealRadius = revealRadiusFor(waveRadius, t);
+      const swapRadius = Math.max(0, waveRadius - WARP_BAND_PX);
       const waveProgress = waveRadius / maxRadius;
 
-      setOldMask(screens, origin, revealRadius);
-      setRevealMask(reveal, origin, revealRadius);
-      syncRevealLayout(track, screens);
-      updateBandWarp(origin, revealRadius, waveRadius);
+      swapUnitsInWave(swapUnits, origin, swapRadius, nextLang);
+      updateBandWarp(swapUnits, origin, swapRadius, waveRadius);
       if (hasGl) drawLiquid(waveProgress, timeSec, glOrigin);
 
       if (t < 1) {
         requestAnimationFrame(frame);
       } else {
+        for (const unit of swapUnits) {
+          if (!swappedUnits.has(unit.node)) unit.patch(nextLang);
+        }
         apply();
-        reveal.remove();
         clearBandWarp();
-        clearMask(screens);
+        swappedUnits.clear();
         if (canvas) canvas.style.display = "none";
         busy = false;
         resolve();
       }
     };
 
-    setRevealMask(reveal, origin, 0);
     if (canvas) canvas.style.display = "block";
     requestAnimationFrame(frame);
   });
