@@ -1,3 +1,5 @@
+import { playLangTransition } from "./lang-transition.js";
+
 const STORAGE_KEY = "portfolio-lang";
 
 /** @typedef {"en" | "de"} Lang */
@@ -72,7 +74,9 @@ export function setLang(lang) {
 }
 
 export function toggleLang() {
-  setLang(currentLang === "en" ? "de" : "en");
+  const next = currentLang === "en" ? "de" : "en";
+  if (next === currentLang) return;
+  playLangTransition(() => setLang(next));
 }
 
 /** @param {() => void} fn */
