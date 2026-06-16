@@ -7,7 +7,7 @@ import {
   patchHeadlineInRoot,
 } from "./lang-patch.js";
 
-const DURATION_MS = 1950;
+const DURATION_MS = 2800;
 const WARP_BAND_PX = 48;
 const WARP_SCALE_MAX = 20;
 
