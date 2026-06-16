@@ -4,6 +4,7 @@ import "./style.css";
 import "./headline.css";
 import "./about.css";
 import "./button.js";
+import "./screens.js";
 import { initI18n, toggleLang } from "./i18n.js";
 import { createHeadline } from "./headline.js";
 import { initAbout } from "./about.js";

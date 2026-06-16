@@ -275,6 +275,11 @@ li {
   max-width: var(--content-max);
 }
 
+html.home-entrance #work {
+  opacity: 0;
+  transform: translateY(128px);
+}
+
 .screen--home {
   min-height: 85vh;
   min-height: 85svh;
