@@ -15,7 +15,8 @@ cleanupStuckLangTransition();
 
 const langButton = document.getElementById("lang-toggle");
 if (langButton) {
-  langButton.addEventListener("click", () => {
+  langButton.addEventListener("pointerup", (event) => {
+    if (event.button !== 0) return;
     toggleLang(langButton);
   });
 }

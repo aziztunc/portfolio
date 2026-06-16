@@ -1155,3 +1155,8 @@ export function initGlassButtons(root = document, { immediate = false } = {}) {
 }
 
 initGlassButtons();
+
+const langToggle = document.getElementById("lang-toggle");
+if (langToggle instanceof HTMLElement) {
+  wire(langToggle);
+}

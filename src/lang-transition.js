@@ -1,5 +1,5 @@
 import "./lang-transition.css";
-import { applyLangToSubtree, commitLangChrome, getNextLang } from "./i18n.js";
+import { applyLangToSubtree, getNextLang } from "./i18n.js";
 import {
   patchAboutCurrently,
   patchAboutIntro,
@@ -79,7 +79,7 @@ void main() {
   outColor = vec4(col, intensity * 0.78);
 }`;
 
-let busy = false;
+let activeTransitionId = 0;
 /** @type {HTMLCanvasElement | null} */
 let canvas = null;
 /** @type {WebGL2RenderingContext | null} */
@@ -376,10 +376,16 @@ function maxWaveRadius(origin) {
   return Math.max(...corners.map(([x, y]) => Math.hypot(x - origin.x, y - origin.y))) + 48;
 }
 
+/** Cancel any in-flight language transition. */
+export function cancelLangTransition() {
+  activeTransitionId++;
+  cleanupTransitionArtifacts();
+  if (canvas) canvas.style.display = "none";
+}
+
 /** Remove any leftover overlay layers from a previous broken transition. */
 export function cleanupStuckLangTransition() {
-  cleanupTransitionArtifacts();
-  busy = false;
+  cancelLangTransition();
 }
 
 /** @param {() => void} apply @param {HTMLElement | null | undefined} originEl @param {"en" | "de"} [nextLang] */
@@ -387,8 +393,8 @@ export function playLangTransition(apply, originEl, nextLang) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const lang = nextLang ?? getNextLang();
 
-  if (reduced || busy) {
-    if (!busy) apply();
+  if (reduced) {
+    apply();
     return Promise.resolve();
   }
 
@@ -398,9 +404,8 @@ export function playLangTransition(apply, originEl, nextLang) {
     return Promise.resolve();
   }
 
+  const transitionId = ++activeTransitionId;
   cleanupTransitionArtifacts();
-  busy = true;
-  commitLangChrome(lang);
   ensureSvgFilter();
   const hasGl = ensureGl();
   const origin = getOriginViewport(originEl);
@@ -412,6 +417,10 @@ export function playLangTransition(apply, originEl, nextLang) {
     const start = performance.now();
 
     const finish = () => {
+      if (transitionId !== activeTransitionId) {
+        resolve();
+        return;
+      }
       try {
         for (const unit of swapUnits) {
           if (!swappedUnits.has(unit.node)) unit.patch(lang);
@@ -421,12 +430,15 @@ export function playLangTransition(apply, originEl, nextLang) {
         clearBandWarp();
         swappedUnits.clear();
         if (canvas) canvas.style.display = "none";
-        busy = false;
         resolve();
       }
     };
 
     const frame = (now) => {
+      if (transitionId !== activeTransitionId) {
+        resolve();
+        return;
+      }
       try {
         const t = Math.min(1, (now - start) / DURATION_MS);
         const eased = easeOutCubic(t);

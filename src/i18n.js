@@ -144,6 +144,7 @@ export function setLang(lang, options = {}) {
 
 export function toggleLang(originEl) {
   const next = getNextLang();
+  commitLangChrome(next);
   playLangTransition(() => setLang(next, { soft: true }), originEl, next);
 }
 
