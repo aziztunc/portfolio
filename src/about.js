@@ -14,10 +14,9 @@ export function initAbout(root) {
   };
 
   const timelineRoot = root.querySelector("[data-about='timeline']");
-  const principlesRoot = root.querySelector("[data-about='principles']");
   const currentlyRoot = root.querySelector("[data-about='currently']");
 
-  if (!timelineRoot || !principlesRoot || !currentlyRoot) return;
+  if (!timelineRoot || !currentlyRoot) return;
 
   let activeId = "01";
 
@@ -29,23 +28,6 @@ export function initAbout(root) {
     if (introEls.imgLabel) introEls.imgLabel.textContent = content.imgLabel;
     if (introEls.imgMeta) introEls.imgMeta.textContent = content.imgMeta;
     if (introEls.img) introEls.img.setAttribute("alt", content.imgAlt);
-  }
-
-  /** @param {ReturnType<typeof getAboutContent>} content */
-  function renderPrinciples(content) {
-    principlesRoot.innerHTML = "";
-    for (const principle of content.principles) {
-      const card = document.createElement("article");
-      card.className = "about-principle";
-      card.innerHTML = `
-        <span class="about-principle__index">${principle.index}</span>
-        <h3 class="about-principle__title">${principle.title}</h3>
-        <p class="about-principle__body"></p>
-      `;
-      const body = card.querySelector(".about-principle__body");
-      if (body) body.textContent = principle.body;
-      principlesRoot.appendChild(card);
-    }
   }
 
   /** @param {ReturnType<typeof getAboutContent>} content */
@@ -123,25 +105,32 @@ export function initAbout(root) {
     if (!hasNode) activeId = content.nodes[0]?.id ?? "01";
 
     timelineRoot.innerHTML = `
-      <div class="about-timeline__header">
-        <h2 class="about-timeline__title"></h2>
-        <span class="about-timeline__mode"></span>
-      </div>
-      <div class="about-timeline__body">
-        <ol class="about-timeline__track" role="listbox" aria-label="Career timeline"></ol>
-        <div class="about-timeline__detail about-timeline__detail--visible" aria-live="polite"></div>
+      <div class="about-timeline">
+        <div class="about-timeline__header">
+          <div class="about-timeline__header-row">
+            <h2 class="about-timeline__title"></h2>
+            <span class="about-timeline__mode"></span>
+          </div>
+          <p class="about-timeline__hint"></p>
+        </div>
+        <div class="about-timeline__body">
+          <ol class="about-timeline__track" role="listbox" aria-label="Career timeline"></ol>
+          <div class="about-timeline__detail about-timeline__detail--visible" aria-live="polite"></div>
+        </div>
       </div>
     `;
 
     const title = timelineRoot.querySelector(".about-timeline__title");
     const mode = timelineRoot.querySelector(".about-timeline__mode");
+    const hint = timelineRoot.querySelector(".about-timeline__hint");
     const track = timelineRoot.querySelector(".about-timeline__track");
     const detail = timelineRoot.querySelector(".about-timeline__detail");
 
-    if (!title || !mode || !track || !detail) return;
+    if (!title || !mode || !hint || !track || !detail) return;
 
     title.textContent = content.timelineTitle;
     mode.textContent = `[${content.timelineMode}]`;
+    hint.textContent = content.timelineHint;
 
     for (const node of content.nodes) {
       const item = document.createElement("li");
@@ -153,6 +142,7 @@ export function initAbout(root) {
       button.className = "about-timeline__button";
       button.setAttribute("role", "option");
       button.setAttribute("aria-selected", node.id === activeId ? "true" : "false");
+      button.setAttribute("aria-label", `${node.period}: ${node.title}`);
       button.dataset.nodeId = node.id;
       button.innerHTML = `
         <span class="about-timeline__marker" aria-hidden="true"></span>
@@ -161,6 +151,7 @@ export function initAbout(root) {
           <span class="about-timeline__node-title"></span>
           <span class="about-timeline__node-summary"></span>
         </span>
+        <span class="about-timeline__node-chevron" aria-hidden="true">→</span>
       `;
 
       const period = button.querySelector(".about-timeline__node-period");
@@ -228,7 +219,6 @@ export function initAbout(root) {
     const content = getAboutContent(getLang());
     renderIntro(content);
     renderTimeline(content);
-    renderPrinciples(content);
     renderCurrently(content);
   }
 

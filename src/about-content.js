@@ -4,7 +4,7 @@
 const aboutContent = {
   en: {
     greeting: "Hey.",
-    meta: "MINDSET · WERDEGANG · COLOGNE",
+    meta: "WERDEGANG · COLOGNE",
     introP1:
       "I'm Aziz — a multidisciplinary product designer based in Cologne. I care about systems that feel obvious in use and honest in build: clear hierarchy, tight interaction logic, and details that hold up when you zoom in.",
     introP2:
@@ -14,6 +14,7 @@ const aboutContent = {
     imgAlt: "Portrait of Aziz Tunc — placeholder",
     timelineTitle: "Werdegang",
     timelineMode: "timeline",
+    timelineHint: "Select a node to explore →",
     selectedPrefix: "SELECTED_NODE:",
     nodes: [
       {
@@ -69,23 +70,6 @@ const aboutContent = {
         tags: ["Branding", "Web", "Process"],
       },
     ],
-    principles: [
-      {
-        index: "01",
-        title: "CLARITY",
-        body: "Reduce until the flow explains itself.",
-      },
-      {
-        index: "02",
-        title: "CRAFT",
-        body: "Details are the product: spacing, states, edge cases.",
-      },
-      {
-        index: "03",
-        title: "BUILD",
-        body: "Design with implementation in mind — not as an afterthought.",
-      },
-    ],
     currentlyTitle: "CURRENTLY",
     currentlyItems: [
       "Based in Cologne, DE",
@@ -96,7 +80,7 @@ const aboutContent = {
   },
   de: {
     greeting: "Hey.",
-    meta: "MINDSET · WERDEGANG · KÖLN",
+    meta: "WERDEGANG · KÖLN",
     introP1:
       "Ich bin Aziz — multidisziplinärer Produktdesigner mit Sitz in Köln. Mir sind Systeme wichtig, die in der Nutzung selbstverständlich wirken und im Aufbau ehrlich bleiben: klare Hierarchie, präzise Interaktionslogik und Details, die auch beim Hineinzoomen tragen.",
     introP2:
@@ -106,6 +90,7 @@ const aboutContent = {
     imgAlt: "Porträt von Aziz Tunc — Platzhalter",
     timelineTitle: "Werdegang",
     timelineMode: "timeline",
+    timelineHint: "Knoten wählen zum Erkunden →",
     selectedPrefix: "SELECTED_NODE:",
     nodes: [
       {
@@ -159,23 +144,6 @@ const aboutContent = {
           "Eine Präferenz für Klarheit und konsequente Umsetzung entwickelt.",
         ],
         tags: ["Branding", "Web", "Process"],
-      },
-    ],
-    principles: [
-      {
-        index: "01",
-        title: "KLARHEIT",
-        body: "Reduzieren, bis der Flow sich selbst erklärt.",
-      },
-      {
-        index: "02",
-        title: "CRAFT",
-        body: "Details sind das Produkt: Abstände, States, Edge Cases.",
-      },
-      {
-        index: "03",
-        title: "BUILD",
-        body: "Mit Implementierung im Kopf designen — nicht nachträglich.",
       },
     ],
     currentlyTitle: "AKTUELL",
