@@ -10,7 +10,6 @@ import {
 const DURATION_MS = 2800;
 const WARP_BAND_PX = 48;
 const WARP_SCALE_MAX = 20;
-const TEXT_FADE_MS = 420;
 
 const VERT = `#version 300 es
 in vec2 a_pos;
@@ -97,18 +96,10 @@ let displaceMap = null;
 /** @typedef {{ x: number; y: number }} Point */
 /** @typedef {{ node: HTMLElement; patch: (lang: "en" | "de") => void }} SwapUnit */
 
-/** @typedef {{ phase: "out" | "in"; start: number }} FadeState */
-
 /** @type {Set<HTMLElement>} */
 const warpedElements = new Set();
 /** @type {Set<HTMLElement>} */
 const swappedUnits = new Set();
-/** @type {Map<HTMLElement, FadeState>} */
-const fadingUnits = new Map();
-
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
 
 function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
@@ -231,14 +222,6 @@ function cleanupTransitionArtifacts() {
   document.querySelectorAll(".lang-liquid-reveal").forEach((node) => node.remove());
   clearBandWarp();
   swappedUnits.clear();
-  fadingUnits.clear();
-
-  document.querySelectorAll(".lang-liquid-swap").forEach((node) => {
-    if (node instanceof HTMLElement) {
-      node.style.opacity = "";
-      node.classList.remove("lang-liquid-swap");
-    }
-  });
 
   const screens = document.getElementById("screens");
   if (screens) {
@@ -308,53 +291,16 @@ function buildSwapUnits(screens) {
   return units;
 }
 
-/** @param {SwapUnit[]} units @param {Point} origin @param {number} swapRadius @param {"en" | "de"} lang @param {number} now */
-function updateSwapFades(units, origin, swapRadius, lang, now) {
-  for (const unit of units) {
-    if (swappedUnits.has(unit.node) || fadingUnits.has(unit.node)) continue;
-    if (distanceFromOrigin(unit.node, origin) > swapRadius) continue;
-    unit.node.classList.add("lang-liquid-swap");
-    fadingUnits.set(unit.node, { phase: "out", start: now });
-  }
-
-  for (const unit of units) {
-    const state = fadingUnits.get(unit.node);
-    if (!state) continue;
-
-    const elapsed = now - state.start;
-    const t = Math.min(1, elapsed / TEXT_FADE_MS);
-
-    if (state.phase === "out") {
-      unit.node.style.opacity = String(1 - easeInOutCubic(t));
-      if (t >= 1) {
-        unit.patch(lang);
-        unit.node.style.filter = "";
-        unit.node.classList.remove("lang-liquid-warp");
-        warpedElements.delete(unit.node);
-        fadingUnits.set(unit.node, { phase: "in", start: now });
-      }
-      continue;
-    }
-
-    unit.node.style.opacity = String(easeInOutCubic(t));
-    if (t >= 1) {
-      unit.node.style.opacity = "";
-      unit.node.classList.remove("lang-liquid-swap");
-      fadingUnits.delete(unit.node);
-      swappedUnits.add(unit.node);
-    }
-  }
-}
-
-/** @param {SwapUnit[]} units */
-function finishPendingSwaps(units, lang) {
+/** @param {SwapUnit[]} units @param {Point} origin @param {number} swapRadius @param {"en" | "de"} lang */
+function swapUnitsInWave(units, origin, swapRadius, lang) {
   for (const unit of units) {
     if (swappedUnits.has(unit.node)) continue;
+    if (distanceFromOrigin(unit.node, origin) > swapRadius) continue;
     unit.patch(lang);
-    unit.node.style.opacity = "";
-    unit.node.classList.remove("lang-liquid-swap");
-    fadingUnits.delete(unit.node);
     swappedUnits.add(unit.node);
+    unit.node.style.filter = "";
+    unit.node.classList.remove("lang-liquid-warp");
+    warpedElements.delete(unit.node);
   }
 }
 
@@ -372,7 +318,7 @@ function updateBandWarp(units, origin, swapRadius, waveRadius) {
   }
 
   for (const unit of units) {
-    if (swappedUnits.has(unit.node) || fadingUnits.has(unit.node)) continue;
+    if (swappedUnits.has(unit.node)) continue;
     const dist = distanceFromOrigin(unit.node, origin);
     if (dist >= swapRadius && dist <= waveRadius + 28) {
       unit.node.classList.add("lang-liquid-warp");
@@ -471,18 +417,19 @@ export function playLangTransition(apply, originEl) {
       const swapRadius = Math.max(0, waveRadius - WARP_BAND_PX);
       const waveProgress = waveRadius / maxRadius;
 
-      updateSwapFades(swapUnits, origin, swapRadius, nextLang, now);
+      swapUnitsInWave(swapUnits, origin, swapRadius, nextLang);
       updateBandWarp(swapUnits, origin, swapRadius, waveRadius);
       if (hasGl) drawLiquid(waveProgress, timeSec, glOrigin);
 
       if (t < 1) {
         requestAnimationFrame(frame);
       } else {
-        finishPendingSwaps(swapUnits, nextLang);
+        for (const unit of swapUnits) {
+          if (!swappedUnits.has(unit.node)) unit.patch(nextLang);
+        }
         apply();
         clearBandWarp();
         swappedUnits.clear();
-        fadingUnits.clear();
         if (canvas) canvas.style.display = "none";
         busy = false;
         resolve();
