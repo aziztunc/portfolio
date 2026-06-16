@@ -1,0 +1,131 @@
+/* ---------------------------------------------------------------------------
+   Design tokens — matched to jake.ly
+   --------------------------------------------------------------------------- */
+
+:root {
+  --color-bg: #17191c;
+  --color-fg: #ffffff;
+  --color-secondary: #cccccc;
+  --color-accent: #33bbff;
+  --color-selection-bg: #c5e2ef;
+  --color-selection-fg: #12266b;
+
+  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-extrabold: 800;
+
+  --track-caps: 0.04em;
+
+  --fs-h1: 36px;
+  --lh-h1: 48px;
+  --fs-h3: 36px;
+  --lh-h3: 48px;
+  --fs-h4: 20px;
+  --lh-h4: 32px;
+  --fs-body: 20px;
+  --lh-body: 28px;
+  --fs-nav: 16px;
+  --lh-nav: 24px;
+
+  --fs-h2: clamp(36px, 6vw + 12px, 96px);
+  --lh-h2: 1.05;
+
+  --page-gutter: 24px;
+  --header-h: 80px;
+  --header-pad-top: var(--page-gutter);
+  --content-max: 1048px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --fs-h1: 72px;
+    --lh-h1: 96px;
+    --fs-h3: 48px;
+    --lh-h3: 56px;
+    --fs-h4: 24px;
+    --lh-h4: 32px;
+    --fs-body: 24px;
+    --lh-body: 32px;
+
+    --page-gutter: 64px;
+    --header-h: 96px;
+    --header-pad-top: 32px;
+  }
+}
+
+h1,
+.h1,
+h2,
+.h2,
+h3,
+.h3,
+h4,
+.h4,
+p,
+.p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+h1,
+.h1 {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  color: var(--color-fg);
+}
+
+h2,
+.h2 {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  color: var(--color-fg);
+}
+
+h3,
+.h3 {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-fg);
+}
+
+h4,
+.h4 {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-h4);
+  line-height: var(--lh-h4);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+p,
+.p {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--color-fg);
+}
+
+.nav-link {
+  font-family: var(--font-mono);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-nav);
+  line-height: var(--lh-nav);
+  letter-spacing: var(--track-caps);
+  color: var(--color-fg);
+}
