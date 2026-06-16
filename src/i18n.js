@@ -108,23 +108,43 @@ export function getHeadlineCopyForLang(lang) {
   };
 }
 
+/** @param {Lang} lang */
+export function commitLangChrome(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang;
+  localStorage.setItem(STORAGE_KEY, lang);
+
+  const header = document.querySelector(".site-header");
+  if (header instanceof HTMLElement) {
+    applyLangToSubtree(header, lang);
+  }
+
+  document.title = textFor(lang, "meta.title");
+  const desc = document.querySelector('meta[name="description"]');
+  if (desc) desc.setAttribute("content", textFor(lang, "meta.description"));
+}
+
 /** @typedef {{ soft?: boolean }} LangChangeEvent */
 
 /** @param {Lang} lang @param {LangChangeEvent} [options] */
 export function setLang(lang, options = {}) {
-  if (lang === currentLang) return;
-  currentLang = lang;
-  document.documentElement.lang = lang;
-  localStorage.setItem(STORAGE_KEY, lang);
-  applyTranslations();
-  const event = { soft: options.soft === true };
-  for (const listener of listeners) listener(event);
+  const changed = lang !== currentLang;
+  if (changed) {
+    currentLang = lang;
+    document.documentElement.lang = lang;
+    localStorage.setItem(STORAGE_KEY, lang);
+    applyTranslations();
+  }
+
+  if (changed || options.soft) {
+    const event = { soft: options.soft === true };
+    for (const listener of listeners) listener(event);
+  }
 }
 
 export function toggleLang(originEl) {
-  const next = currentLang === "en" ? "de" : "en";
-  if (next === currentLang) return;
-  playLangTransition(() => setLang(next, { soft: true }), originEl);
+  const next = getNextLang();
+  playLangTransition(() => setLang(next, { soft: true }), originEl, next);
 }
 
 /** @param {(event: LangChangeEvent) => void} fn */

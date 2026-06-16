@@ -1,5 +1,5 @@
 import "./lang-transition.css";
-import { applyLangToSubtree, getNextLang } from "./i18n.js";
+import { applyLangToSubtree, commitLangChrome, getNextLang } from "./i18n.js";
 import {
   patchAboutCurrently,
   patchAboutIntro,
@@ -382,9 +382,11 @@ export function cleanupStuckLangTransition() {
   busy = false;
 }
 
-/** @param {() => void} apply @param {HTMLElement | null | undefined} originEl */
-export function playLangTransition(apply, originEl) {
+/** @param {() => void} apply @param {HTMLElement | null | undefined} originEl @param {"en" | "de"} [nextLang] */
+export function playLangTransition(apply, originEl, nextLang) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lang = nextLang ?? getNextLang();
+
   if (reduced || busy) {
     if (!busy) apply();
     return Promise.resolve();
@@ -398,41 +400,53 @@ export function playLangTransition(apply, originEl) {
 
   cleanupTransitionArtifacts();
   busy = true;
+  commitLangChrome(lang);
   ensureSvgFilter();
   const hasGl = ensureGl();
   const origin = getOriginViewport(originEl);
   const glOrigin = getOriginGl(origin);
   const maxRadius = maxWaveRadius(origin);
-  const nextLang = getNextLang();
   const swapUnits = buildSwapUnits(screens);
 
   return new Promise((resolve) => {
     const start = performance.now();
 
-    const frame = (now) => {
-      const t = Math.min(1, (now - start) / DURATION_MS);
-      const eased = easeOutCubic(t);
-      const timeSec = (now - start) / 1000;
-      const waveRadius = eased * maxRadius;
-      const swapRadius = Math.max(0, waveRadius - WARP_BAND_PX);
-      const waveProgress = waveRadius / maxRadius;
-
-      swapUnitsInWave(swapUnits, origin, swapRadius, nextLang);
-      updateBandWarp(swapUnits, origin, swapRadius, waveRadius);
-      if (hasGl) drawLiquid(waveProgress, timeSec, glOrigin);
-
-      if (t < 1) {
-        requestAnimationFrame(frame);
-      } else {
+    const finish = () => {
+      try {
         for (const unit of swapUnits) {
-          if (!swappedUnits.has(unit.node)) unit.patch(nextLang);
+          if (!swappedUnits.has(unit.node)) unit.patch(lang);
         }
         apply();
+      } finally {
         clearBandWarp();
         swappedUnits.clear();
         if (canvas) canvas.style.display = "none";
         busy = false;
         resolve();
+      }
+    };
+
+    const frame = (now) => {
+      try {
+        const t = Math.min(1, (now - start) / DURATION_MS);
+        const eased = easeOutCubic(t);
+        const timeSec = (now - start) / 1000;
+        const waveRadius = eased * maxRadius;
+        const swapRadius = Math.max(0, waveRadius - WARP_BAND_PX);
+        const waveProgress = waveRadius / maxRadius;
+
+        swapUnitsInWave(swapUnits, origin, swapRadius, lang);
+        updateBandWarp(swapUnits, origin, swapRadius, waveRadius);
+        if (hasGl) drawLiquid(waveProgress, timeSec, glOrigin);
+
+        if (t < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          finish();
+        }
+      } catch (error) {
+        console.error("lang transition failed", error);
+        finish();
       }
     };
 
