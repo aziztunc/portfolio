@@ -1,25 +1,29 @@
 import "./lang-transition.css";
 
-const TOTAL_MS = 380;
-const SWAP_MS = 185;
-const RESTORE_MS = 120;
+const CHAR_MS = 22;
+const HOLD_MS = 120;
+const FADE_MS = 180;
 
 let busy = false;
 /** @type {HTMLElement | null} */
-let sweepHost = null;
+let terminalHost = null;
 
-function ensureSweepHost() {
-  if (sweepHost) return sweepHost;
-  sweepHost = document.createElement("div");
-  sweepHost.className = "lang-sweep";
-  sweepHost.setAttribute("aria-hidden", "true");
-  sweepHost.innerHTML = '<div class="lang-sweep__band"></div>';
-  document.body.appendChild(sweepHost);
-  return sweepHost;
+function ensureTerminalHost() {
+  if (terminalHost) return terminalHost;
+  terminalHost = document.createElement("div");
+  terminalHost.className = "lang-terminal";
+  terminalHost.setAttribute("aria-hidden", "true");
+  terminalHost.innerHTML = `
+    <div class="lang-terminal__panel">
+      <span class="lang-terminal__text"></span><span class="lang-terminal__caret"></span>
+    </div>
+  `;
+  document.body.appendChild(terminalHost);
+  return terminalHost;
 }
 
-/** @param {() => void} apply */
-export function playLangTransition(apply) {
+/** @param {() => void} apply @param {string} targetLang */
+export function playLangTransition(apply, targetLang) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduced || busy) {
     if (!busy) apply();
@@ -27,35 +31,45 @@ export function playLangTransition(apply) {
   }
 
   busy = true;
-  const host = ensureSweepHost();
-  const screens = document.getElementById("screens");
-  const root = document.documentElement;
+  const host = ensureTerminalHost();
+  const textEl = host.querySelector(".lang-terminal__text");
+  if (!textEl) {
+    busy = false;
+    apply();
+    return Promise.resolve();
+  }
+
+  const command = `> setLocale("${targetLang}")`;
+  textEl.textContent = "";
+  host.classList.remove("lang-terminal--visible", "lang-terminal--fade");
 
   return new Promise((resolve) => {
-    let swapped = false;
-    const swap = () => {
-      if (swapped) return;
-      swapped = true;
-      apply();
-      root.classList.add("lang-transition--restore");
-    };
-
-    const finish = () => {
-      host.classList.remove("lang-sweep--active");
-      root.classList.remove("lang-transition", "lang-transition--restore");
-      screens?.classList.remove("lang-transition__content");
-      busy = false;
-      resolve();
-    };
-
-    root.classList.add("lang-transition");
-    screens?.classList.add("lang-transition__content");
-
     requestAnimationFrame(() => {
-      host.classList.add("lang-sweep--active");
+      host.classList.add("lang-terminal--visible");
     });
 
-    window.setTimeout(swap, SWAP_MS);
-    window.setTimeout(finish, TOTAL_MS + RESTORE_MS);
+    let index = 0;
+    const typeNext = () => {
+      if (index < command.length) {
+        textEl.textContent = command.slice(0, index + 1);
+        index += 1;
+        window.setTimeout(typeNext, CHAR_MS);
+        return;
+      }
+
+      window.setTimeout(() => {
+        apply();
+        window.setTimeout(() => {
+          host.classList.add("lang-terminal--fade");
+          window.setTimeout(() => {
+            host.classList.remove("lang-terminal--visible", "lang-terminal--fade");
+            busy = false;
+            resolve();
+          }, FADE_MS);
+        }, HOLD_MS);
+      }, HOLD_MS);
+    };
+
+    typeNext();
   });
 }

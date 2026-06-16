@@ -76,7 +76,7 @@ export function setLang(lang) {
 export function toggleLang() {
   const next = currentLang === "en" ? "de" : "en";
   if (next === currentLang) return;
-  playLangTransition(() => setLang(next));
+  playLangTransition(() => setLang(next), next);
 }
 
 /** @param {() => void} fn */
