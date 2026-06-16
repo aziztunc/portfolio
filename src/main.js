@@ -14,7 +14,7 @@ initI18n();
 const langButton = document.getElementById("lang-toggle");
 if (langButton) {
   langButton.addEventListener("click", () => {
-    toggleLang();
+    toggleLang(langButton);
   });
 }
 

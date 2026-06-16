@@ -73,10 +73,10 @@ export function setLang(lang) {
   for (const listener of listeners) listener();
 }
 
-export function toggleLang() {
+export function toggleLang(originEl) {
   const next = currentLang === "en" ? "de" : "en";
   if (next === currentLang) return;
-  playLangTransition(() => setLang(next), next);
+  playLangTransition(() => setLang(next), originEl);
 }
 
 /** @param {() => void} fn */
