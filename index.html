@@ -82,12 +82,34 @@
         </div>
       </section>
 
-      <section class="screen" id="about">
-        <div class="placeholder-section screen__inner">
-          <h2 class="h2" data-i18n="placeholder.about.title">About</h2>
-          <div class="placeholder-section__box" data-i18n="placeholder.about.body">
-            About section placeholder.
-          </div>
+      <section class="screen screen--about" id="about">
+        <div class="screen__inner about" data-about-root>
+          <header class="about-intro">
+            <div class="about-intro__media">
+              <div class="about-intro__frame about-intro__frame--placeholder">
+                <!-- Replace src when portrait is ready -->
+                <img data-about="img" src="" alt="Portrait of Aziz Tunc — placeholder" hidden />
+              </div>
+              <span class="about-intro__img-label" data-about="img-label">IMG_AZIZ_01.webp</span>
+              <span class="about-intro__img-meta" data-about="img-meta"
+                >cologne · product design · design engineering</span
+              >
+            </div>
+            <div class="about-intro__copy">
+              <h2 class="about-intro__greeting" data-about="greeting">Hey.</h2>
+              <p class="about-intro__meta" data-about="meta">MINDSET · WERDEGANG · COLOGNE</p>
+              <div class="about-intro__text">
+                <p class="p" data-about="intro-p1"></p>
+                <p class="p" data-about="intro-p2"></p>
+              </div>
+            </div>
+          </header>
+
+          <section data-about="timeline" aria-label="Career timeline"></section>
+
+          <section class="about-principles" data-about="principles" aria-label="Principles"></section>
+
+          <section class="about-currently" data-about="currently" aria-label="Currently"></section>
         </div>
       </section>
     </main>

@@ -24,8 +24,6 @@ export const copy = {
     "placeholder.work.body": "Project showcase placeholder.",
     "placeholder.skills.title": "More",
     "placeholder.skills.body": "Skills and extras placeholder.",
-    "placeholder.about.title": "About",
-    "placeholder.about.body": "About section placeholder.",
     "scroll.label": "Scroll to work",
   },
   de: {
@@ -48,8 +46,6 @@ export const copy = {
     "placeholder.work.body": "Projekt-Portfolio Platzhalter.",
     "placeholder.skills.title": "Mehr",
     "placeholder.skills.body": "Skills und Extras Platzhalter.",
-    "placeholder.about.title": "Über mich",
-    "placeholder.about.body": "Über-mich-Bereich Platzhalter.",
     "scroll.label": "Zum Portfolio scrollen",
   },
 };
