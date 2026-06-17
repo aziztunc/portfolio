@@ -1,0 +1,234 @@
+/* More / skills grid — adapted from jake.ly */
+
+.screen--skills .screen__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  max-width: 960px;
+}
+
+.skills__title {
+  text-align: center;
+  margin: 0;
+}
+
+.skills__grid {
+  width: 100%;
+  max-width: 960px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(5, 1fr);
+  grid-template-areas:
+    "tokens proto"
+    "tokens proto"
+    "motion explore"
+    "motion explore"
+    "motion photo";
+  aspect-ratio: 360 / 690;
+  max-height: min(640px, 90svh);
+}
+
+@media (min-width: 768px) {
+  .skills__grid {
+    grid-template-columns: 3fr 4fr 3fr;
+    grid-template-rows: repeat(3, 1fr);
+    grid-template-areas:
+      "tokens proto motion"
+      "tokens explore motion"
+      "photo explore motion";
+    aspect-ratio: 960 / 632;
+  }
+}
+
+.skill-card {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  text-decoration: none;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  perspective: 1000px;
+  transition: z-index 0s 200ms;
+}
+
+.skill-card--tokens {
+  grid-area: tokens;
+}
+
+.skill-card--proto {
+  grid-area: proto;
+}
+
+.skill-card--motion {
+  grid-area: motion;
+}
+
+.skill-card--explore {
+  grid-area: explore;
+}
+
+.skill-card--photo {
+  grid-area: photo;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .skill-card:hover {
+    z-index: 10;
+  }
+}
+
+.skill-card::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: 1;
+}
+
+.skill-card__inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #212225;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  --card-pad: 12px;
+  padding: var(--card-pad);
+  min-width: 0;
+  min-height: 0;
+  --tilt-amount: 0;
+  scale: 1;
+  transform:
+    rotateX(calc(var(--tilt-y, 0) * var(--tilt-amount) * -12deg))
+    rotateY(calc(var(--tilt-x, 0) * var(--tilt-amount) * 12deg));
+  transition:
+    scale 400ms ease-in,
+    --tilt-amount 400ms ease-in,
+    box-shadow 400ms ease-in;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .skill-card:hover .skill-card__inner {
+    transition:
+      scale 400ms ease-out,
+      --tilt-amount 400ms ease-out,
+      box-shadow 400ms ease-out;
+    --tilt-amount: 1;
+    scale: 1.08;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+}
+
+@media (min-width: 768px) {
+  .skill-card__inner {
+    --card-pad: 16px;
+  }
+}
+
+.skill-card__media {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skill-card__placeholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
+  background:
+    linear-gradient(160deg, rgba(51, 187, 255, 0.12), rgba(255, 255, 255, 0.02)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 1px,
+      transparent 1px,
+      transparent 10px
+    ),
+    #2a2d31;
+}
+
+.skill-card__placeholder-label {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.skill-card__title {
+  margin: 12px 0 0;
+  font-family: var(--font-mono);
+  font-weight: var(--fw-medium);
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--color-fg);
+}
+
+@media (min-width: 768px) {
+  .skill-card__title {
+    font-size: 24px;
+  }
+}
+
+.skill-card__badge {
+  position: absolute;
+  top: var(--card-pad);
+  right: var(--card-pad);
+  padding: 6px 10px;
+  border-radius: 9999px;
+  background: rgba(51, 187, 255, 0.16);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.skill-card--tokens .skill-card__inner {
+  gap: 8px;
+}
+
+.skill-card--tokens .skill-card__title {
+  order: -1;
+  margin: 0 0 8px;
+}
+
+.skill-card--tokens .skill-card__media {
+  flex: 1 1 auto;
+}
+
+.skill-card--tokens .skill-card__badge {
+  position: static;
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.skill-card--motion .skill-card__title,
+.skill-card--explore .skill-card__title {
+  margin-top: auto;
+}
+
+.skill-card--photo .skill-card__inner {
+  justify-content: flex-end;
+}
+
+.skill-card--photo .skill-card__media {
+  flex: 0 0 55%;
+}
+
+.skill-card--photo .skill-card__title {
+  margin-top: 12px;
+}

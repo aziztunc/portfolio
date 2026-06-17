@@ -1,3 +1,5 @@
+import { playLangTransition } from "./lang-transition.js";
+
 const STORAGE_KEY = "portfolio-lang";
 
 /** @typedef {"en" | "de"} Lang */
@@ -20,12 +22,6 @@ export const copy = {
     "headline.typedBottom": "DESIGN ENGINEER();",
     "headline.scrambleBottom": "UX ENTHUSIAST",
     "headline.layersTitle": "Layers",
-    "placeholder.work.title": "Work",
-    "placeholder.work.body": "Project showcase placeholder.",
-    "placeholder.skills.title": "More",
-    "placeholder.skills.body": "Skills and extras placeholder.",
-    "placeholder.about.title": "About",
-    "placeholder.about.body": "About section placeholder.",
     "scroll.label": "Scroll to work",
   },
   de: {
@@ -44,12 +40,6 @@ export const copy = {
     "headline.typedBottom": "DESIGN ENGINEER();",
     "headline.scrambleBottom": "UX-ENTHUSIAST",
     "headline.layersTitle": "Ebenen",
-    "placeholder.work.title": "Arbeit",
-    "placeholder.work.body": "Projekt-Portfolio Platzhalter.",
-    "placeholder.skills.title": "Mehr",
-    "placeholder.skills.body": "Skills und Extras Platzhalter.",
-    "placeholder.about.title": "Über mich",
-    "placeholder.about.body": "Über-mich-Bereich Platzhalter.",
     "scroll.label": "Zum Portfolio scrollen",
   },
 };
@@ -57,7 +47,7 @@ export const copy = {
 /** @type {Lang} */
 let currentLang = "en";
 
-/** @type {Set<() => void>} */
+/** @type {Set<(event: LangChangeEvent) => void>} */
 const listeners = new Set();
 
 /** @returns {Lang} */
@@ -65,21 +55,92 @@ export function getLang() {
   return currentLang;
 }
 
+/** @returns {Lang} */
+export function getNextLang() {
+  return currentLang === "en" ? "de" : "en";
+}
+
+/** @param {Lang} lang @param {string} key */
+function textFor(lang, key) {
+  return copy[lang][key] ?? copy.en[key] ?? key;
+}
+
+/** @param {HTMLElement} root @param {Lang} lang */
+export function applyLangToSubtree(root, lang) {
+  root.querySelectorAll("[data-i18n]").forEach((node) => {
+    const key = node.getAttribute("data-i18n");
+    if (!key) return;
+    const value = textFor(lang, key);
+    if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
+      node.placeholder = value;
+    } else if (node instanceof HTMLAnchorElement && key.endsWith(".label")) {
+      node.setAttribute("aria-label", value);
+    } else {
+      node.textContent = value;
+    }
+  });
+
+  root.querySelectorAll("[data-i18n-aria]").forEach((node) => {
+    const key = node.getAttribute("data-i18n-aria");
+    if (key) node.setAttribute("aria-label", textFor(lang, key));
+  });
+}
+
 /** @param {Lang} lang */
-export function setLang(lang) {
-  if (lang === currentLang) return;
+export function getHeadlineCopyForLang(lang) {
+  return {
+    aria: textFor(lang, "headline.aria"),
+    metaTop: textFor(lang, "headline.metaTop"),
+    top: textFor(lang, "headline.top"),
+    metaBottom: textFor(lang, "headline.metaBottom"),
+    initialBottom: textFor(lang, "headline.initialBottom"),
+    typedBottom: textFor(lang, "headline.typedBottom"),
+    scrambleBottom: textFor(lang, "headline.scrambleBottom"),
+    layersTitle: textFor(lang, "headline.layersTitle"),
+  };
+}
+
+/** @param {Lang} lang */
+export function commitLangChrome(lang) {
   currentLang = lang;
   document.documentElement.lang = lang;
   localStorage.setItem(STORAGE_KEY, lang);
-  applyTranslations();
-  for (const listener of listeners) listener();
+
+  const header = document.querySelector(".site-header");
+  if (header instanceof HTMLElement) {
+    applyLangToSubtree(header, lang);
+  }
+
+  document.title = textFor(lang, "meta.title");
+  const desc = document.querySelector('meta[name="description"]');
+  if (desc) desc.setAttribute("content", textFor(lang, "meta.description"));
 }
 
-export function toggleLang() {
-  setLang(currentLang === "en" ? "de" : "en");
+/** @typedef {{ soft?: boolean }} LangChangeEvent */
+
+/** @param {Lang} lang @param {LangChangeEvent} [options] */
+export function setLang(lang, options = {}) {
+  const changed = lang !== currentLang;
+  if (changed) {
+    currentLang = lang;
+    document.documentElement.lang = lang;
+    localStorage.setItem(STORAGE_KEY, lang);
+    applyTranslations();
+  }
+
+  if (changed || options.soft) {
+    const event = { soft: options.soft === true };
+    for (const listener of listeners) listener(event);
+  }
 }
 
-/** @param {() => void} fn */
+export function toggleLang(originEl) {
+  const next = getNextLang();
+  commitLangChrome(next);
+  playLangTransition(() => setLang(next, { soft: true }), originEl, next);
+}
+
+/** @param {(event: LangChangeEvent) => void} fn */
 export function onLangChange(fn) {
   listeners.add(fn);
   return () => listeners.delete(fn);

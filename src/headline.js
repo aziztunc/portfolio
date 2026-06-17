@@ -1,4 +1,5 @@
-import { getHeadlineCopy, onLangChange } from "./i18n.js";
+import { getHeadlineCopy, getLang, onLangChange } from "./i18n.js";
+import { patchHeadlineInRoot } from "./lang-patch.js";
 
 const CURSOR_ARROW_SVG = `
 <svg viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" fill="none" aria-hidden="true">
@@ -494,8 +495,12 @@ export function createHeadline(host) {
     resizeTimer = setTimeout(bumpGeneration, 120);
   });
 
-  onLangChange(() => {
+  onLangChange((event) => {
     applyStaticCopy();
+    if (event.soft) {
+      patchHeadlineInRoot(host, getLang());
+      return;
+    }
     bumpGeneration();
   });
 

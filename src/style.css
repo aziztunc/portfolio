@@ -273,6 +273,12 @@ li {
 .screen__inner {
   width: 100%;
   max-width: var(--content-max);
+  container-type: inline-size;
+}
+
+html.home-entrance #work {
+  opacity: 0;
+  transform: translateY(128px);
 }
 
 .screen--home {
@@ -380,6 +386,7 @@ li {
   letter-spacing: 0.06em;
   cursor: pointer;
   isolation: isolate;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
   user-select: none;

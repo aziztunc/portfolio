@@ -64,33 +64,92 @@
         </a>
       </section>
 
-      <section class="screen" id="work">
-        <div class="placeholder-section screen__inner">
-          <h2 class="h2" data-i18n="placeholder.work.title">Work</h2>
-          <div class="placeholder-section__box" data-i18n="placeholder.work.body">
-            Project showcase placeholder.
-          </div>
-        </div>
-      </section>
+      <section class="screen screen--project" id="work" data-project-root data-project-id="01"></section>
 
-      <section class="screen" id="skills">
-        <div class="placeholder-section screen__inner">
-          <h2 class="h2" data-i18n="placeholder.skills.title">More</h2>
-          <div class="placeholder-section__box" data-i18n="placeholder.skills.body">
-            Skills and extras placeholder.
-          </div>
-        </div>
-      </section>
+      <section class="screen screen--project" id="project-02" data-project-root data-project-id="02"></section>
 
-      <section class="screen" id="about">
-        <div class="placeholder-section screen__inner">
-          <h2 class="h2" data-i18n="placeholder.about.title">About</h2>
-          <div class="placeholder-section__box" data-i18n="placeholder.about.body">
-            About section placeholder.
+      <section class="screen screen--project" id="project-03" data-project-root data-project-id="03"></section>
+
+      <section class="screen screen--skills" id="skills" data-more-root></section>
+
+      <section class="screen screen--about" id="about">
+        <div class="screen__inner about" data-about-root>
+          <header class="about-intro">
+            <div class="about-intro__media">
+              <div class="about-intro__frame about-intro__frame--placeholder">
+                <!-- Replace src when portrait is ready -->
+                <img data-about="img" src="" alt="Portrait of Aziz Tunc — placeholder" hidden />
+              </div>
+              <span class="about-intro__img-label" data-about="img-label">IMG_AZIZ_01.webp</span>
+              <span class="about-intro__img-meta" data-about="img-meta"
+                >cologne · product design · design engineering</span
+              >
+            </div>
+            <div class="about-intro__copy">
+              <h2 class="about-intro__greeting" data-about="greeting">Hey.</h2>
+              <p class="about-intro__meta" data-about="meta">WERDEGANG · COLOGNE</p>
+              <div class="about-intro__text">
+                <p class="p" data-about="intro-p1"></p>
+                <p class="p" data-about="intro-p2"></p>
+              </div>
+            </div>
+          </header>
+
+          <section data-about="timeline" aria-label="Career timeline"></section>
+
+          <section class="about-currently" data-about="currently" aria-label="Currently"></section>
+
+          <div class="about-contact">
+            <button class="experiment-button about-contact__cta" type="button" data-contact-open>
+              <canvas class="experiment-button__canvas" aria-hidden="true"></canvas>
+              <span class="experiment-button__label">MESSAGE ME</span>
+            </button>
           </div>
         </div>
       </section>
     </main>
+
+    <div class="toast" id="contact-toast" role="status" aria-live="polite" aria-atomic="true">
+      <span class="toast__message">Placeholder — form not wired yet.</span>
+    </div>
+
+    <div class="contact-modal" id="contact-modal" aria-hidden="true">
+      <button class="contact-modal__close" type="button" data-contact-close aria-label="Close dialog"></button>
+      <div class="contact-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+        <form class="contact-modal__form" id="contact-modal-form" novalidate>
+          <h2 class="contact-modal__title" id="contact-modal-title">Let's Chat</h2>
+          <div class="contact-modal__field">
+            <label class="contact-modal__label" for="contact-modal-email">Your Email</label>
+            <input
+              class="contact-modal__input"
+              id="contact-modal-email"
+              type="email"
+              name="email"
+              required
+              autocomplete="email"
+              placeholder="you@example.com"
+            />
+          </div>
+          <div class="contact-modal__field contact-modal__field--message">
+            <label class="contact-modal__label" for="contact-modal-message">Message</label>
+            <textarea
+              class="contact-modal__input contact-modal__textarea"
+              id="contact-modal-message"
+              name="message"
+              rows="3"
+              required
+              placeholder="Say hi…"
+            ></textarea>
+          </div>
+          <div class="contact-modal__actions">
+            <button class="experiment-button contact-modal__submit" type="submit">
+              <canvas class="experiment-button__canvas" aria-hidden="true"></canvas>
+              <span class="experiment-button__label">SEND</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
   </body>
