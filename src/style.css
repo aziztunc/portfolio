@@ -273,6 +273,7 @@ li {
 .screen__inner {
   width: 100%;
   max-width: var(--content-max);
+  container-type: inline-size;
 }
 
 html.home-entrance #work {

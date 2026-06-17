@@ -1,0 +1,336 @@
+/* Project showcase screens — adapted from jake.ly */
+
+.screen--project .screen__inner {
+  container-type: inline-size;
+}
+
+.project {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  column-gap: 24px;
+  row-gap: 32px;
+  align-items: start;
+  position: relative;
+}
+
+.project__title {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-weight: var(--fw-semibold);
+  font-size: clamp(56px, 11vw, 144px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-fg);
+  margin: 0;
+}
+
+.project__title-shadow {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  pointer-events: none;
+  user-select: none;
+}
+
+.project__media {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.project__visual {
+  position: relative;
+  width: min(80vw, 520px);
+  max-height: 56vh;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(51, 187, 255, 0.14), rgba(255, 255, 255, 0.02)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.04) 0,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px,
+      transparent 12px
+    ),
+    #212225;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.project__visual--orion {
+  aspect-ratio: 16 / 10;
+}
+
+.project__visual--photos {
+  aspect-ratio: 3 / 4;
+  max-height: 52vh;
+}
+
+.project__visual-label,
+.project__placeholder-label {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.project__meta {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  margin-top: -16px;
+}
+
+.project__subtitle {
+  margin: 0;
+  text-align: left;
+}
+
+.project__cta[disabled] {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+/* Orion layout */
+.project--orion .project__title {
+  font-size: 22.5cqi;
+  text-align: center;
+}
+
+.project--orion .project__meta {
+  align-items: center;
+  text-align: center;
+}
+
+.project--orion .project__subtitle {
+  text-align: center;
+}
+
+/* Display glasses layout */
+.project--displayglasses .project__title {
+  font-size: 11.5cqi;
+  transform: translateZ(0);
+}
+
+.project--displayglasses .project__subtitle {
+  max-width: 28ch;
+  text-wrap: balance;
+}
+
+.project--displayglasses .project__placeholder {
+  position: relative;
+  width: 100%;
+  max-width: min(65vw, 280px);
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(51, 187, 255, 0.2), transparent 55%),
+    linear-gradient(160deg, #2a2d31, #1a1c1f);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.project--displayglasses .project__placeholder::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.screen--project:has(.project--displayglasses) {
+  overflow: hidden;
+}
+
+/* Photos layout */
+.project--photos3d .project__title {
+  font-size: 18cqi;
+}
+
+.project--photos3d .project__subtitle {
+  text-wrap: balance;
+}
+
+@media (min-width: 768px) {
+  .project {
+    row-gap: 48px;
+  }
+
+  .project--orion .project__title {
+    font-size: 11.5cqi;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .project--orion .project__title br {
+    display: none;
+  }
+
+  .project--orion {
+    grid-template-rows: auto auto auto;
+    row-gap: 0;
+  }
+
+  .project--orion .project__title {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .project--orion .project__media {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    z-index: 0;
+    margin-top: -24px;
+  }
+
+  .project--orion .project__meta {
+    grid-column: 9 / -1;
+    grid-row: 3;
+    margin-top: -48px;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .project--orion .project__subtitle {
+    text-align: left;
+  }
+
+  .project--displayglasses .project__title {
+    font-size: 9.5cqi;
+  }
+
+  .project--displayglasses {
+    grid-template-rows: auto auto;
+    row-gap: 32px;
+    position: relative;
+    min-height: 64vh;
+    align-content: center;
+  }
+
+  .project--displayglasses .project__title {
+    grid-column: 1 / 10;
+    grid-row: 1;
+    margin-left: -0.07em;
+    line-height: 1;
+    white-space: normal;
+  }
+
+  .project--displayglasses .project__media {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: calc(5 / 12 * 100%);
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .project--displayglasses .project__placeholder {
+    max-width: 400px;
+    max-height: 64vh;
+  }
+
+  .project--displayglasses .project__meta {
+    grid-column: 1 / 8;
+    grid-row: 2;
+    align-self: start;
+    margin-top: 0;
+  }
+
+  .screen--project:has(.project--displayglasses) {
+    padding-top: 232px;
+  }
+
+  .screen--project:has(.project--displayglasses)::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 10%;
+    background: linear-gradient(to bottom, transparent, var(--color-bg));
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .project--photos3d {
+    grid-template-rows: auto auto;
+    row-gap: 32px;
+    position: relative;
+    min-height: min(60vh, calc(0.625 * var(--content-max)));
+    align-content: start;
+    padding-top: 24px;
+  }
+
+  .project--photos3d .project__media {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 50%;
+    z-index: auto;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin-top: 0;
+  }
+
+  .project--photos3d .project__visual {
+    max-height: 60vh;
+    max-width: 100%;
+  }
+
+  .project--photos3d .project__title {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: start;
+    margin-top: 0;
+    font-size: 14cqi;
+  }
+
+  .project--photos3d .project__meta {
+    grid-column: 7 / -1;
+    grid-row: 2;
+    align-self: start;
+    align-items: flex-start;
+    text-align: left;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .screen--project:has(.project--displayglasses) {
+    --ph-shift: 64px;
+    padding-top: calc(min(65vw, 280px) * 520 / 480 - var(--ph-shift) / 2);
+    scroll-margin-top: calc(var(--ph-shift) * -1);
+    --snap-offset-y: var(--ph-shift);
+  }
+
+  .project--displayglasses .project__media {
+    justify-content: flex-start;
+  }
+
+  .project--displayglasses .project__placeholder {
+    margin-inline: 0;
+  }
+}

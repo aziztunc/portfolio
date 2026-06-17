@@ -1,5 +1,8 @@
 import { applyLangToSubtree, getHeadlineCopyForLang } from "./i18n.js";
 import { getAboutContent } from "./about-content.js";
+import { getProjectById } from "./work-content.js";
+import { getMoreContent } from "./more-content.js";
+import { getContactContent } from "./contact-content.js";
 
 /** @param {HTMLElement} root @param {"en" | "de"} lang */
 export function patchHeadlineInRoot(root, lang) {
@@ -141,6 +144,80 @@ export function patchAboutInRoot(root, lang) {
   patchAboutIntro(root, lang);
   patchAboutTimeline(root, lang);
   patchAboutCurrently(root, lang);
+}
+
+/** @param {HTMLElement} section @param {"en" | "de"} lang @param {string} projectId */
+export function patchProjectSection(section, lang, projectId) {
+  const project = getProjectById(lang, projectId);
+  if (!project) return;
+
+  const title = section.querySelector(".project__title");
+  const subtitle = section.querySelector(".project__subtitle");
+  const ctaLabel = section.querySelector(".project__cta .experiment-button__label");
+  const visual = section.querySelector(".project__visual");
+  const placeholderLabel = section.querySelector(".project__placeholder-label");
+
+  if (title) {
+    title.innerHTML = `<span class="project__title-shadow" aria-hidden="true">${project.titleHtml}</span>${project.titleHtml}`;
+  }
+
+  if (subtitle) subtitle.textContent = project.subtitle;
+  if (ctaLabel) ctaLabel.textContent = project.cta;
+  if (visual) visual.setAttribute("aria-label", project.mediaAlt);
+  if (placeholderLabel) placeholderLabel.textContent = project.mediaLabel;
+
+  const visualLabel = section.querySelector(".project__visual-label");
+  if (visualLabel) visualLabel.textContent = project.mediaLabel;
+}
+
+/** @param {HTMLElement} root @param {"en" | "de"} lang */
+export function patchMoreInRoot(root, lang) {
+  const content = getMoreContent(lang);
+  const title = root.querySelector(".skills__title");
+  if (title) title.textContent = content.title;
+
+  for (const item of content.items) {
+    const card = root.querySelector(`[data-skill-id="${item.id}"]`);
+    if (!card) continue;
+
+    const cardTitle = card.querySelector(".skill-card__title");
+    const badge = card.querySelector(".skill-card__badge");
+    const placeholder = card.querySelector(".skill-card__placeholder");
+    const placeholderLabel = card.querySelector(".skill-card__placeholder-label");
+
+    if (cardTitle) cardTitle.innerHTML = item.titleHtml;
+    if (badge && item.badge) badge.textContent = item.badge;
+    if (placeholder) placeholder.setAttribute("aria-label", item.mediaAlt);
+    if (placeholderLabel) placeholderLabel.textContent = item.mediaLabel;
+    card.setAttribute("aria-label", `${item.titlePlain} — placeholder`);
+  }
+}
+
+/** @param {HTMLElement} root @param {"en" | "de"} lang */
+export function patchContactInRoot(root, lang) {
+  const content = getContactContent(lang);
+  const ctaLabel = root.querySelector("[data-contact-open] .experiment-button__label");
+  const modal = document.getElementById("contact-modal");
+  if (!modal) return;
+
+  const modalTitle = modal.querySelector(".contact-modal__title");
+  const emailLabel = modal.querySelector("[for='contact-modal-email']");
+  const messageLabel = modal.querySelector("[for='contact-modal-message']");
+  const emailInput = modal.querySelector("#contact-modal-email");
+  const messageInput = modal.querySelector("#contact-modal-message");
+  const submitLabel = modal.querySelector(".contact-modal__submit .experiment-button__label");
+  const closeButton = modal.querySelector("[data-contact-close]");
+  const toastMessage = document.querySelector("#contact-toast .toast__message");
+
+  if (ctaLabel) ctaLabel.textContent = content.cta;
+  if (modalTitle) modalTitle.textContent = content.modalTitle;
+  if (emailLabel) emailLabel.textContent = content.emailLabel;
+  if (messageLabel) messageLabel.textContent = content.messageLabel;
+  if (emailInput instanceof HTMLInputElement) emailInput.placeholder = content.emailPlaceholder;
+  if (messageInput instanceof HTMLTextAreaElement) messageInput.placeholder = content.messagePlaceholder;
+  if (submitLabel) submitLabel.textContent = content.submit;
+  if (closeButton) closeButton.setAttribute("aria-label", content.close);
+  if (toastMessage) toastMessage.textContent = content.toast;
 }
 
 /** @param {HTMLElement} root @param {"en" | "de"} lang */

@@ -1,10 +1,13 @@
 import "./lang-transition.css";
-import { applyLangToSubtree, getNextLang } from "./i18n.js";
+import { getNextLang } from "./i18n.js";
 import {
   patchAboutCurrently,
   patchAboutIntro,
   patchAboutTimeline,
+  patchContactInRoot,
   patchHeadlineInRoot,
+  patchMoreInRoot,
+  patchProjectSection,
 } from "./lang-patch.js";
 
 const DURATION_MS = 2800;
@@ -246,19 +249,21 @@ function buildSwapUnits(screens) {
     });
   }
 
-  const work = screens.querySelector("#work");
-  if (work instanceof HTMLElement) {
+  screens.querySelectorAll("[data-project-root]").forEach((section) => {
+    if (!(section instanceof HTMLElement)) return;
+    const projectId = section.dataset.projectId;
+    if (!projectId) return;
     units.push({
-      node: work,
-      patch: (lang) => applyLangToSubtree(work, lang),
+      node: section,
+      patch: (lang) => patchProjectSection(section, lang, projectId),
     });
-  }
+  });
 
-  const skills = screens.querySelector("#skills");
+  const skills = screens.querySelector("[data-more-root]");
   if (skills instanceof HTMLElement) {
     units.push({
       node: skills,
-      patch: (lang) => applyLangToSubtree(skills, lang),
+      patch: (lang) => patchMoreInRoot(skills, lang),
     });
   }
 
@@ -284,6 +289,14 @@ function buildSwapUnits(screens) {
       units.push({
         node: currently,
         patch: (lang) => patchAboutCurrently(about, lang),
+      });
+    }
+
+    const contact = about.querySelector(".about-contact");
+    if (contact instanceof HTMLElement) {
+      units.push({
+        node: contact,
+        patch: (lang) => patchContactInRoot(about, lang),
       });
     }
   }

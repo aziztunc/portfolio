@@ -22,10 +22,6 @@ export const copy = {
     "headline.typedBottom": "DESIGN ENGINEER();",
     "headline.scrambleBottom": "UX ENTHUSIAST",
     "headline.layersTitle": "Layers",
-    "placeholder.work.title": "Work",
-    "placeholder.work.body": "Project showcase placeholder.",
-    "placeholder.skills.title": "More",
-    "placeholder.skills.body": "Skills and extras placeholder.",
     "scroll.label": "Scroll to work",
   },
   de: {
@@ -44,10 +40,6 @@ export const copy = {
     "headline.typedBottom": "DESIGN ENGINEER();",
     "headline.scrambleBottom": "UX-ENTHUSIAST",
     "headline.layersTitle": "Ebenen",
-    "placeholder.work.title": "Arbeit",
-    "placeholder.work.body": "Projekt-Portfolio Platzhalter.",
-    "placeholder.skills.title": "Mehr",
-    "placeholder.skills.body": "Skills und Extras Platzhalter.",
     "scroll.label": "Zum Portfolio scrollen",
   },
 };
